@@ -1,0 +1,7 @@
+﻿backend/controller/authController.js
+backend/model/mentor.js
+backend/model/student.js
+frontend/lib/models/mentor_model.dart
+frontend/lib/models/student_model.dart
+frontend/lib/screens/auth/signup_screen.dart
+git_status.txt

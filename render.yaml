@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: mentora-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    rootDirectory: backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000
+    disk:
+      name: database-storage
+      mountPath: /opt/render/project/src/backend/data
+      sizeGB: 1

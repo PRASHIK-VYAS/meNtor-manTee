@@ -1,0 +1,128 @@
+﻿commit 5914450d4fefe8542bd4d6cf54078f373381579c
+Author: Prashik Nilesh Vyas <prashikvyas@gmail.com>
+Date:   Wed Mar 4 02:47:30 2026 +0530
+
+    feat: complete dynamic activities & leaderboards integration with bug fixes
+
+diff --git a/frontend/lib/screens/mentor/mentor_main_screen.dart b/frontend/lib/screens/mentor/mentor_main_screen.dart
+index 7328552..5445d4b 100644
+--- a/frontend/lib/screens/mentor/mentor_main_screen.dart
++++ b/frontend/lib/screens/mentor/mentor_main_screen.dart
+@@ -3,8 +3,9 @@ import 'mentor_dashboard_screen.dart';
+ import 'student_list_screen.dart';
+ import 'broadcast_screen.dart'; // New
+ import 'doc_approval_screen.dart'; // New
+-// New
++import 'mentor_leaderboard_screen.dart'; // New
+ import 'tabs/mentor_profile_tab.dart'; // New
++import 'mentor_activity_approval_screen.dart'; // New
+ // New
+ // New
+ 
+@@ -24,29 +25,35 @@ class _MentorMainScreenState extends State<MentorMainScreen> {
+   final List<Widget> _screens = [
+     const MentorDashboardScreen(),
+     const StudentListScreen(),
++    const MentorLeaderboardScreen(),
+     const BroadcastScreen(),
+     const MeetingManagementScreen(),
+-    const TaskAssignmentScreen(), // Added
++    const TaskAssignmentScreen(),
+     const DocApprovalScreen(),
++    const MentorActivityApprovalScreen(),
+     const MentorProfileTab(),
+   ];
+ 
+   final List<String> _titles = [
+     'Dashboard',
+     'My Students',
++    'Leaderboard',
+     'Broadcasts',
+     'Meetings',
+-    'Assign Tasks', // Added
++    'Assign Tasks',
+     'Doc Approvals',
++    'Activity Approvals',
+     'My Profile',
+   ];
+ 
+   @override
+   Widget build(BuildContext context) {
+     return Scaffold(
+-      appBar: _currentIndex == 0 ? null : AppBar(
+-        title: Text(_titles[_currentIndex]),
+-      ),
++      appBar: _currentIndex == 0
++          ? null
++          : AppBar(
++              title: Text(_titles[_currentIndex]),
++            ),
+       drawer: Drawer(
+         child: Container(
+           color: Colors.white,
+@@ -64,7 +71,8 @@ class _MentorMainScreenState extends State<MentorMainScreen> {
+                     const CircleAvatar(
+                       radius: 30,
+                       backgroundColor: Color(0xFFF5F5F7),
+-                      child: Icon(Icons.account_circle_rounded, size: 48, color: Colors.black),
++                      child: Icon(Icons.account_circle_rounded,
++                          size: 48, color: Colors.black),
+                     ),
+                     const SizedBox(height: 16),
+                     const Text(
+@@ -101,30 +109,42 @@ class _MentorMainScreenState extends State<MentorMainScreen> {
+                 index: 1,
+                 selectedIcon: Icons.people,
+               ),
++              _buildDrawerItem(
++                icon: Icons.leaderboard_outlined,
++                title: 'Leaderboard',
++                index: 2,
++                selectedIcon: Icons.leaderboard,
++              ),
+               _buildDrawerItem(
+                 icon: Icons.campaign_outlined,
+                 title: 'Send Broadcast',
+-                index: 2,
++                index: 3,
+                 selectedIcon: Icons.campaign,
+               ),
+               _buildDrawerItem(
+                 icon: Icons.video_camera_front_outlined,
+                 title: 'Schedule Meetings',
+-                index: 3,
++                index: 4,
+                 selectedIcon: Icons.video_camera_front,
+               ),
+               _buildDrawerItem(
+                 icon: Icons.task_alt_rounded,
+                 title: 'Assign Tasks',
+-                index: 4,
++                index: 5,
+                 selectedIcon: Icons.task_alt,
+               ),
+               _buildDrawerItem(
+                 icon: Icons.approval_rounded,
+                 title: 'Document Approvals',
+-                index: 5,
++                index: 6,
+                 selectedIcon: Icons.approval,
+               ),
++              _buildDrawerItem(
++                icon: Icons.playlist_add_check,
++                title: 'Activity Approvals',
++                index: 7,
++                selectedIcon: Icons.playlist_add_check_circle,
++              ),
+               const Padding(
+                 padding: EdgeInsets.symmetric(horizontal: 16),
+                 child: Divider(),
+@@ -132,7 +152,7 @@ class _MentorMainScreenState extends State<MentorMainScreen> {
+               _buildDrawerItem(
+                 icon: Icons.person_outline,
+                 title: 'My Profile',
+-                index: 6,
++                index: 8,
+                 selectedIcon: Icons.person,
+               ),
+               const Padding(
