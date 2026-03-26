@@ -144,358 +144,401 @@ class _StudentDocumentsScreenState extends State<StudentDocumentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Consumer<StudentProvider>(
-        builder: (context, provider, child) {
-          final student = provider.currentStudent;
-          if (student == null) return const SizedBox();
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Custom Tab Bar
+              Container(
+                color: Colors.white,
+                child: const TabBar(
+                  indicatorColor: Colors.black,
+                  labelColor: Colors.black,
+                  unselectedLabelColor: Colors.black45,
+                  indicatorWeight: 3,
+                  labelStyle: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                    letterSpacing: 1.2,
+                  ),
+                  tabs: [
+                    Tab(text: 'MY DOCUMENTS'),
+                    Tab(text: 'MENTOR REQUESTS'),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Colors.black12),
+              Expanded(
+                child: Consumer<StudentProvider>(
+                  builder: (context, provider, child) {
+                    final student = provider.currentStudent;
+                    if (student == null) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-          final docStatuses = student.documentStatuses;
-          double completion = student.documentCompletion;
+                    return TabBarView(
+                      children: [
+                        _buildStandardDocumentsTab(context, provider),
+                        _buildMentorRequestsTab(context, provider),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
+  Widget _buildStandardDocumentsTab(
+      BuildContext context, StudentProvider provider) {
+    final student = provider.currentStudent!;
+    final docStatuses = student.documentStatuses;
+    double completion = student.documentCompletion;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        children: [
+          // Completion Bar
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF5F5F7),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.black.withOpacity(0.05)),
+            ),
             child: Column(
               children: [
-                // Mentor Requests Section
-                if (provider.documentRequests.isNotEmpty) ...[
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F5F7),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.black.withOpacity(0.05)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'DOCUMENT PROFILE',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
+                        letterSpacing: 1.5,
+                        color: Colors.black54,
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Text(
+                      '${completion.toInt()}% COMPLETE',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                LinearProgressIndicator(
+                  value: completion / 100,
+                  backgroundColor: Colors.white,
+                  color: Colors.black,
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                if (completion <= 50) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.notification_important_outlined,
-                                color: Colors.black87),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'PENDING REQUESTS',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 13,
-                                letterSpacing: 1.5,
-                                color: Colors.black54,
-                              ),
+                        Icon(Icons.warning_amber_rounded,
+                            color: Colors.orange.shade800, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Please upload your core documents to avoid verification delays.',
+                            style: TextStyle(
+                              color: Colors.orange.shade900,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              height: 1.4,
                             ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.black,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '${provider.pendingRequestsCount}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        ...provider.documentRequests.take(3).map((request) {
-                          final isPending = request.status == 'Pending';
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color: Colors.black.withOpacity(0.05)),
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 4),
-                              leading: Icon(
-                                request.type == 'Certification'
-                                    ? Icons.verified_outlined
-                                    : Icons.description_outlined,
-                                color: isPending
-                                    ? Colors.black87
-                                    : Colors.green.shade700,
-                              ),
-                              title: Text(
-                                request.title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 15,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (request.description.isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      request.description,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          color: Colors.black54, fontSize: 13),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: isPending
-                                          ? Colors.orange.withOpacity(0.1)
-                                          : Colors.green.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      request.status.toUpperCase(),
-                                      style: TextStyle(
-                                        color: isPending
-                                            ? Colors.orange.shade800
-                                            : Colors.green.shade800,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 9,
-                                        letterSpacing: 1.0,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              trailing: isPending
-                                  ? TextButton(
-                                      onPressed: () =>
-                                          _uploadDocumentForRequest(
-                                              context, request),
-                                      style: TextButton.styleFrom(
-                                        backgroundColor: Colors.black,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(8)),
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 16, vertical: 8),
-                                      ),
-                                      child: const Text('UPLOAD',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.w900,
-                                              fontSize: 11,
-                                              letterSpacing: 1.0)),
-                                    )
-                                  : Icon(Icons.check_circle,
-                                      color: Colors.green.shade700),
-                              isThreeLine: true,
-                            ),
-                          );
-                        }),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
                 ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: ListView.separated(
+              itemCount: _requiredDocs.length,
+              separatorBuilder: (ctx, i) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final title = _requiredDocs[index];
+                final status = docStatuses[title] ?? 'Missing';
+                // Only consider it 'uploaded' if it's not the initial 'Pending' or 'Missing' state
+                final isUploaded = status != 'Missing' && status != 'Pending';
 
-                // Completion Bar
-                Container(
-                  padding: const EdgeInsets.all(24),
+                return Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5F5F7),
-                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.black.withOpacity(0.05)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: ListTile(
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    leading: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isUploaded
+                            ? Colors.green.withOpacity(0.1)
+                            : const Color(0xFFF5F5F7),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        isUploaded
+                            ? Icons.verified_outlined
+                            : Icons.upload_file_outlined,
+                        color: isUploaded
+                            ? Colors.green.shade700
+                            : Colors.black45,
+                      ),
+                    ),
+                    title: Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                        fontSize: 15,
+                      ),
+                    ),
+                    subtitle: Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Row(
                         children: [
-                          const Text(
-                            'DOCUMENT PROFILE',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w900,
-                              fontSize: 13,
-                              letterSpacing: 1.5,
-                              color: Colors.black54,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: status == 'Approved'
+                                  ? Colors.green.withOpacity(0.1)
+                                  : status == 'Missing'
+                                      ? Colors.red.withOpacity(0.1)
+                                      : Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(6),
                             ),
-                          ),
-                          Text(
-                            '${completion.toInt()}% COMPLETE',
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 13,
-                              letterSpacing: 1.0,
+                            child: Text(
+                              status.toUpperCase(),
+                              style: TextStyle(
+                                color: status == 'Approved'
+                                    ? Colors.green.shade800
+                                    : status == 'Missing'
+                                        ? Colors.red.shade800
+                                        : Colors.orange.shade800,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 9,
+                                letterSpacing: 1.0,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      LinearProgressIndicator(
-                        value: completion / 100,
-                        backgroundColor: Colors.white,
-                        color: Colors.black,
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      if (completion <= 50) ...[
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.warning_amber_rounded,
-                                  color: Colors.orange.shade800, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Please upload your core documents to avoid verification delays.',
-                                  style: TextStyle(
-                                    color: Colors.orange.shade900,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    height: 1.4,
-                                  ),
-                                ),
+                    ),
+                    trailing: isUploaded
+                        ? IconButton(
+                            icon: const Icon(Icons.remove_red_eye_outlined,
+                                color: Colors.black87),
+                            onPressed: () => _viewDocument(context, title,
+                                student.documentFilePaths[title]),
+                          )
+                        : TextButton(
+                            onPressed: () => _uploadDocument(context, title),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.black,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                            ],
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                            ),
+                            child: const Text(
+                              'UPLOAD',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 11,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ],
                   ),
-                ),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: _requiredDocs.length,
-                    separatorBuilder: (ctx, i) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final title = _requiredDocs[index];
-                      final status = docStatuses[title] ?? 'Missing';
-                      final isUploaded = status != 'Missing';
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border:
-                              Border.all(color: Colors.black.withOpacity(0.05)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.02),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 8),
-                          leading: Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: isUploaded
-                                  ? Colors.green.withOpacity(0.1)
-                                  : const Color(0xFFF5F5F7),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              isUploaded
-                                  ? Icons.verified_outlined
-                                  : Icons.upload_file_outlined,
-                              color: isUploaded
-                                  ? Colors.green.shade700
-                                  : Colors.black45,
-                            ),
-                          ),
-                          title: Text(
-                            title,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
-                              fontSize: 15,
-                            ),
-                          ),
-                          subtitle: Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: status == 'Approved'
-                                        ? Colors.green.withOpacity(0.1)
-                                        : status == 'Missing'
-                                            ? Colors.red.withOpacity(0.1)
-                                            : Colors.orange.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    status.toUpperCase(),
-                                    style: TextStyle(
-                                      color: status == 'Approved'
-                                          ? Colors.green.shade800
-                                          : status == 'Missing'
-                                              ? Colors.red.shade800
-                                              : Colors.orange.shade800,
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 9,
-                                      letterSpacing: 1.0,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          trailing: isUploaded
-                              ? IconButton(
-                                  icon: const Icon(
-                                      Icons.remove_red_eye_outlined,
-                                      color: Colors.black87),
-                                  onPressed: () => _viewDocument(context, title,
-                                      student.documentFilePaths[title]),
-                                )
-                              : TextButton(
-                                  onPressed: () =>
-                                      _uploadDocument(context, title),
-                                  style: TextButton.styleFrom(
-                                    backgroundColor: Colors.black,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
-                                  ),
-                                  child: const Text(
-                                    'UPLOAD',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 11,
-                                      letterSpacing: 1.0,
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      );
-                    },
+  Widget _buildMentorRequestsTab(
+      BuildContext context, StudentProvider provider) {
+    final requests = provider.documentRequests
+        .where((req) => req.status == 'Pending')
+        .toList();
+
+    if (requests.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.assignment_turned_in_outlined,
+                size: 64, color: Colors.black12),
+            const SizedBox(height: 16),
+            const Text(
+              'NO PENDING REQUESTS',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 14,
+                letterSpacing: 1.5,
+                color: Colors.black26,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Your mentor hasn\'t requested any\ncustom documents yet.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.black38,
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: requests.length,
+      separatorBuilder: (ctx, i) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final request = requests[index];
+        final isPending = request.status == 'Pending';
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.black.withOpacity(0.05)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            leading: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isPending
+                    ? Colors.orange.withOpacity(0.1)
+                    : Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                request.type == 'Certification'
+                    ? Icons.verified_outlined
+                    : Icons.description_outlined,
+                color: isPending ? Colors.orange.shade700 : Colors.green.shade700,
+              ),
+            ),
+            title: Text(
+              request.title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 16,
+                letterSpacing: -0.5,
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (request.description.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    request.description,
+                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isPending
+                        ? Colors.orange.withOpacity(0.1)
+                        : Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    request.status.toUpperCase(),
+                    style: TextStyle(
+                      color: isPending
+                          ? Colors.orange.shade800
+                          : Colors.green.shade800,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 9,
+                      letterSpacing: 1.0,
+                    ),
                   ),
                 ),
               ],
             ),
-          );
-        },
-      ),
+            trailing: isPending
+                ? TextButton(
+                    onPressed: () => _uploadDocumentForRequest(context, request),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ),
+                    child: const Text('UPLOAD',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 11,
+                            letterSpacing: 1.0)),
+                  )
+                : Icon(Icons.check_circle, color: Colors.green.shade700),
+            isThreeLine: request.description.isNotEmpty,
+          ),
+        );
+      },
     );
   }
 }

@@ -23,25 +23,48 @@ class _MentorLeaderboardScreenState extends State<MentorLeaderboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<LeaderboardMember>>(
-      future: _leaderboardFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
+    return RefreshIndicator(
+      onRefresh: () async {
+        setState(() {
+          _leaderboardFuture = Provider.of<MentorProvider>(context, listen: false)
+              .getLeaderboard();
+        });
+        await _leaderboardFuture;
+      },
+      child: FutureBuilder<List<LeaderboardMember>>(
+        future: _leaderboardFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: ListView(
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  Center(child: Text('Error: ${snapshot.error}')),
+                ],
+              ),
+            );
+          }
 
-        final leaderboard = snapshot.data ?? [];
-        if (leaderboard.isEmpty) {
-          return const Center(
-              child: Text('No students found for this leaderboard.'));
-        }
+          final leaderboard = snapshot.data ?? [];
+          if (leaderboard.isEmpty) {
+            return ListView(
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.4,
+                ),
+                const Center(
+                    child: Text('No students found for this leaderboard.')),
+              ],
+            );
+          }
 
         final top3 = leaderboard.take(3).toList();
-        final remaining =
-            leaderboard.length > 3 ? leaderboard.skip(3).toList() : [];
+        final allMembers = leaderboard;
 
         return Column(
           children: [
@@ -85,22 +108,25 @@ class _MentorLeaderboardScreenState extends State<MentorLeaderboardScreen> {
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.all(16),
-                itemCount: remaining.length,
+                itemCount: allMembers.length,
                 separatorBuilder: (ctx, i) => const Divider(),
                 itemBuilder: (context, index) {
-                  final member = remaining[index];
-                  final currentRank = index + 4;
+                  final member = allMembers[index];
+                  final currentRank = index + 1;
 
                   return ListTile(
                     leading: Text(
                       '#$currentRank',
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
-                          color: Colors.grey),
+                          color: currentRank <= 3 ? Colors.amber : Colors.grey),
                     ),
                     title: Text(member.fullName,
-                        style: const TextStyle(fontWeight: FontWeight.normal)),
+                        style: TextStyle(
+                            fontWeight: currentRank <= 3
+                                ? FontWeight.bold
+                                : FontWeight.normal)),
                     trailing: Text(
                       '${member.totalScore} pts',
                       style: const TextStyle(fontWeight: FontWeight.w600),
@@ -112,8 +138,9 @@ class _MentorLeaderboardScreenState extends State<MentorLeaderboardScreen> {
           ],
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildPodiumItem(
       BuildContext context, int rank, String name, double points, Color color) {
@@ -161,7 +188,8 @@ class _MentorLeaderboardScreenState extends State<MentorLeaderboardScreen> {
         ),
         const SizedBox(height: 8),
         Text(name,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.white),
             overflow: TextOverflow.ellipsis),
       ],
     );

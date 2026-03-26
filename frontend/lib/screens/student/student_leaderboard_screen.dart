@@ -30,20 +30,45 @@ class _StudentLeaderboardScreenState extends State<StudentLeaderboardScreen> {
         studentProvider.currentStudent?.id ?? authProvider.userId;
 
     return Scaffold(
-      body: FutureBuilder<List<LeaderboardMember>>(
-        future: _leaderboardFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+      body: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {
+            _leaderboardFuture =
+                Provider.of<StudentProvider>(context, listen: false)
+                    .getLeaderboard();
+          });
+          await _leaderboardFuture;
+        },
+        child: FutureBuilder<List<LeaderboardMember>>(
+          future: _leaderboardFuture,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError) {
+              return Center(
+                child: ListView(
+                  children: [
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.4,
+                    ),
+                    Center(child: Text('Error: ${snapshot.error}')),
+                  ],
+                ),
+              );
+            }
 
-          final leaderboard = snapshot.data ?? [];
-          if (leaderboard.isEmpty) {
-            return const Center(child: Text('No leaderboard data available'));
-          }
+            final leaderboard = snapshot.data ?? [];
+            if (leaderboard.isEmpty) {
+              return ListView(
+                children: [
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  const Center(child: Text('No leaderboard data available')),
+                ],
+              );
+            }
 
           // Find current user's rank
           int rank = -1;
@@ -57,8 +82,8 @@ class _StudentLeaderboardScreenState extends State<StudentLeaderboardScreen> {
           }
 
           final top3 = leaderboard.take(3).toList();
-          final remaining =
-              leaderboard.length > 3 ? leaderboard.skip(3).toList() : [];
+          final allMembers = leaderboard;
+          // no skip(3)
 
           return Column(
             children: [
@@ -67,7 +92,7 @@ class _StudentLeaderboardScreenState extends State<StudentLeaderboardScreen> {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: Colors.indigo.shade50,
+                    color: Colors.indigo.shade900, // Dark background
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(30),
                       bottomRight: Radius.circular(30),
@@ -131,11 +156,11 @@ class _StudentLeaderboardScreenState extends State<StudentLeaderboardScreen> {
               Expanded(
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
-                  itemCount: remaining.length,
+                  itemCount: allMembers.length,
                   separatorBuilder: (ctx, i) => const Divider(),
                   itemBuilder: (context, index) {
-                    final member = remaining[index];
-                    final currentRank = index + 4;
+                    final member = allMembers[index];
+                    final currentRank = index + 1;
                     final isMe = member.id == currentUserId;
 
                     return ListTile(
@@ -144,12 +169,17 @@ class _StudentLeaderboardScreenState extends State<StudentLeaderboardScreen> {
                         style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
-                            color: isMe ? Colors.indigo : Colors.grey),
+                            color: isMe
+                                ? Colors.white
+                                : (currentRank <= 3
+                                    ? Colors.amber
+                                    : Colors.grey)),
                       ),
                       title: Text(member.fullName,
                           style: TextStyle(
-                              fontWeight:
-                                  isMe ? FontWeight.bold : FontWeight.normal)),
+                              fontWeight: isMe || currentRank <= 3
+                                  ? FontWeight.bold
+                                  : FontWeight.normal)),
                       trailing: Text(
                         '${member.totalScore} pts',
                         style: const TextStyle(fontWeight: FontWeight.w600),
@@ -163,8 +193,9 @@ class _StudentLeaderboardScreenState extends State<StudentLeaderboardScreen> {
           );
         },
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildPodiumItem(
       BuildContext context, int rank, String name, double points, Color color) {
@@ -212,7 +243,8 @@ class _StudentLeaderboardScreenState extends State<StudentLeaderboardScreen> {
         ),
         const SizedBox(height: 8),
         Text(name,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(
+                fontWeight: FontWeight.bold, color: Colors.white),
             overflow: TextOverflow.ellipsis),
       ],
     );

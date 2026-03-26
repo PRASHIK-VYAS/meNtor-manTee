@@ -66,58 +66,61 @@ class StudentProvider with ChangeNotifier {
       _dismissedNotifications.clear(); // Reset on fresh load
       notifyListeners();
 
-      print('DEBUG: Calling Student endpoints...');
+      print('DEBUG: Calling Student profile endpoint...');
+      final studentResult = await _apiService.get('/students/$studentId');
+      _currentStudent = StudentModel.fromMap(studentResult);
+      print('DEBUG: Student profile loaded: ${_currentStudent?.fullName}');
+      
+      final mentorId = _currentStudent?.mentorId;
+
+      print('DEBUG: Calling remaining Student endpoints...');
       final results = await Future.wait([
-        _apiService.get('/students/$studentId'),
         _apiService.get('/semesters/student/$studentId'),
         _apiService.get('/tasks/student/$studentId'),
         _apiService.get('/certifications/student/$studentId'),
         _apiService.get('/internships/student/$studentId'),
-        _apiService.get('/broadcasts'),
+        mentorId != null ? _apiService.get('/broadcasts/mentor/$mentorId') : Future.value([]),
         _apiService.get('/meetings/student/$studentId'),
         _apiService.get('/documents'),
         _apiService.get('/activities/student/$studentId'),
       ]);
       print('DEBUG: All student data calls completed.');
 
-      _currentStudent = StudentModel.fromMap(results[0]);
-      print('DEBUG: Student profile loaded: ${_currentStudent?.fullName}');
-
-      _semesters = (results[1] as List)
+      _semesters = (results[0] as List)
           .map((data) => SemesterModel.fromMap(data))
           .toList();
       print('DEBUG: Loaded ${_semesters.length} semesters');
 
       _tasks =
-          (results[2] as List).map((data) => TaskModel.fromMap(data)).toList();
+          (results[1] as List).map((data) => TaskModel.fromMap(data)).toList();
       print('DEBUG: Loaded ${_tasks.length} tasks');
 
-      _certifications = (results[3] as List)
+      _certifications = (results[2] as List)
           .map((data) => CertificationModel.fromMap(data))
           .toList();
       print('DEBUG: Loaded ${_certifications.length} certifications');
 
-      _internships = (results[4] as List)
+      _internships = (results[3] as List)
           .map((data) => InternshipModel.fromMap(data))
           .toList();
       print('DEBUG: Loaded ${_internships.length} internships');
 
-      _broadcasts = (results[5] as List)
+      _broadcasts = (results[4] as List)
           .map((data) => BroadcastModel.fromMap(data))
           .toList();
       print('DEBUG: Loaded ${_broadcasts.length} broadcasts');
 
-      _meetings = (results[6] as List)
+      _meetings = (results[5] as List)
           .map((data) => MeetingModel.fromMap(data))
           .toList();
       print('DEBUG: Loaded ${_meetings.length} meetings');
 
-      _documentRequests = (results[7] as List)
+      _documentRequests = (results[6] as List)
           .map((data) => DocumentRequestModel.fromMap(data))
           .toList();
       print('DEBUG: Loaded ${_documentRequests.length} documents');
 
-      _activities = (results[8] as List)
+      _activities = (results[7] as List)
           .map((data) => ActivityModel.fromMap(data))
           .toList();
       print('DEBUG: Loaded ${_activities.length} activities');
@@ -158,17 +161,19 @@ class StudentProvider with ChangeNotifier {
     // 2c. Calculate Document Completion based on Submitted/Verified Base Documents
     double docProgress = 0.0;
 
-    // Total standard documents typically required from a student
-    const int totalRequiredDocuments = 6;
+    // Total standard documents in StudentDocumentsScreen (Resume, ID, 10th, 12th, Internship)
+    const int totalRequiredDocuments = 5;
 
     if (_currentStudent != null &&
         _currentStudent!.documentStatuses.isNotEmpty) {
-      // Calculate how many documents have status 'Uploaded', 'Verified' or 'Approved'
+      // Calculate how many documents have status 'Uploaded', 'Verified', 'Approved' or 'Pending Approval'
       int filledDocs = _currentStudent!.documentStatuses.values
           .where((status) =>
               status == 'Uploaded' ||
               status == 'Verified' ||
-              status == 'Approved')
+              status == 'Approved' ||
+              status == 'Pending Approval' ||
+              status == 'Submitted')
           .length;
 
       docProgress = (filledDocs / totalRequiredDocuments) * 100;
@@ -178,24 +183,37 @@ class StudentProvider with ChangeNotifier {
     // 2d. Calculate Unread Broadcasts (stub for now, usually handled by backend)
     int unreadCount = _currentStudent?.unreadBroadcasts ?? 0;
 
-    // 3. Calculate Credit Score
+    // 3. Calculate Credit Score (Aligned with Backend getLeaderboard)
     double cgpaScore = (_currentStudent!.currentCGPA / 10.0) * 50;
 
     // Sum points of verified certifications capped at 10
     final verifiedCerts = _certifications.where((c) => c.isVerified).toList();
     int totalCertPoints =
-        verifiedCerts.fold<int>(0, (sum, c) => sum + c.points);
-    if (totalCertPoints > 10) totalCertPoints = 10;
+        verifiedCerts.fold<int>(0, (sum, c) => sum + (c.points));
+    int certScore = totalCertPoints > 10 ? 10 : totalCertPoints;
 
-    double certScore = totalCertPoints.toDouble();
-    double internshipScore = (_internships.length * 10).clamp(0, 20).toDouble();
+    int internshipScore = (_internships.length * 10).clamp(0, 20);
 
-    // 3. Subtract dismissed notifications from counts for UI consistency
+    final completedTasksCount =
+        _tasks.where((t) => t.status == 'Completed').length;
+    int taskScore = (completedTasksCount * 2).clamp(0, 20);
+
+    final attendedMeetingsCount = _meetings
+        .where((m) => m.status == 'Completed' || m.status == 'Attended')
+        .length;
+    int meetingScore = (attendedMeetingsCount * 2).clamp(0, 10);
+
+    double totalCreditScore = (cgpaScore +
+            certScore +
+            internshipScore +
+            taskScore +
+            meetingScore)
+        .toDouble();
+
+    // 3b. Subtract dismissed notifications from counts for UI consistency
     if (_dismissedNotifications.contains('tasks')) pendingCount = 0;
     if (_dismissedNotifications.contains('meetings')) meetingCount = 0;
     if (_dismissedNotifications.contains('broadcasts')) unreadCount = 0;
-    // For documents, we don't usually "dismiss" it by clicking, but we can if requested.
-    // However, the user said "once they are pressed they should be gone".
     if (_dismissedNotifications.contains('documents')) docProgress = 100.0;
 
     _currentStudent = _currentStudent!.copyWith(
@@ -203,9 +221,9 @@ class StudentProvider with ChangeNotifier {
       upcomingMeetings: meetingCount,
       documentCompletion: docProgress,
       unreadBroadcasts: unreadCount,
-      creditScore: cgpaScore + certScore + internshipScore,
+      creditScore: totalCreditScore,
       totalInternships: _internships.length,
-      certificationPoints: totalCertPoints,
+      certificationPoints: certScore, // Use capped points for consistency
     );
 
     // If it's dismissed, we might need a way to flag it in the model or just filter in UI.
@@ -306,7 +324,10 @@ class StudentProvider with ChangeNotifier {
 
   Future<void> refreshBroadcasts() async {
     try {
-      final results = await _apiService.get('/broadcasts');
+      final mentorId = _currentStudent?.mentorId;
+      final results = mentorId != null
+          ? await _apiService.get('/broadcasts/mentor/$mentorId')
+          : [];
       _broadcasts = (results as List)
           .map((data) => BroadcastModel.fromMap(data))
           .toList();

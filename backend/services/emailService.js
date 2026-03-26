@@ -70,3 +70,52 @@ exports.sendLoginAlert = async (email, name, device = 'Unknown Device') => {
 
     return transporter.sendMail(mailOptions);
 };
+
+/**
+ * Sends a welcome email to new users.
+ */
+exports.sendWelcomeEmail = async (email, name, role) => {
+    const mailOptions = {
+        from: `"MenTora" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Welcome to MenTora!',
+        html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #4f46e5;">Welcome to MenTora!</h2>
+            <p>Hello ${name},</p>
+            <p>Welcome to MenTora, your professional mentorship platform. Your account as a <strong>${role}</strong> has been successfully created.</p>
+            <p>You can now login and start exploring the platform. We're excited to have you with us!</p>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #6b7280; font-size: 12px;">
+                <p>Best regards,<br>The MenTora Team</p>
+            </div>
+        </div>
+        `,
+    };
+
+    return transporter.sendMail(mailOptions);
+};
+/**
+ * Sends a 6-digit OTP for account registration.
+ */
+exports.sendVerificationOTPEmail = async (email, otp) => {
+    const mailOptions = {
+        from: `"MenTora" <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: 'Verify Your Email - MenTora',
+        html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #4f46e5;">Email Verification</h2>
+            <p>Thank you for choosing MenTora! Use the code below to verify your email and complete your registration.</p>
+            <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 5px; color: #1f2937;">
+                ${otp}
+            </div>
+            <p style="margin-top: 20px; color: #6b7280; font-size: 12px;">If you didn't request this, please ignore this email.</p>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #6b7280; font-size: 12px;">
+                <p>Best regards,<br>The MenTora Team</p>
+            </div>
+        </div>
+        `,
+    };
+
+    return transporter.sendMail(mailOptions);
+};

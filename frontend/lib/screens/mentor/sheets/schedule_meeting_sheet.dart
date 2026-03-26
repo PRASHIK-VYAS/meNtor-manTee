@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
-import '../../../models/meeting_log_model.dart';
+import '../../../models/meeting_model.dart';
 import '../../../models/student_model.dart';
 import '../../../providers/mentor_provider.dart';
+import 'package:intl/intl.dart';
 
 class ScheduleMeetingSheet extends StatefulWidget {
   final StudentModel? preFilledStudent;
@@ -17,6 +17,7 @@ class ScheduleMeetingSheet extends StatefulWidget {
 class _ScheduleMeetingSheetState extends State<ScheduleMeetingSheet> {
   final _formKey = GlobalKey<FormState>();
   final _agendaController = TextEditingController();
+  final _linkController = TextEditingController();
   
   bool _isGroupMeeting = false;
   StudentModel? _selectedStudent;
@@ -287,6 +288,19 @@ class _ScheduleMeetingSheetState extends State<ScheduleMeetingSheet> {
                 validator: (val) => val!.isEmpty ? 'Please enter agenda' : null,
               ),
   
+              const SizedBox(height: 16),
+  
+              // Meeting Link
+              TextFormField(
+                controller: _linkController,
+                decoration: InputDecoration(
+                  labelText: 'Meeting Link (Optional)',
+                  hintText: 'meet.google.com/abc-defg-hij',
+                  prefixIcon: const Icon(Icons.link),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+  
               const SizedBox(height: 24),
   
               SizedBox(
@@ -321,36 +335,34 @@ class _ScheduleMeetingSheetState extends State<ScheduleMeetingSheet> {
                       if (!_isGroupMeeting) {
                         // Individual Meeting
                         final student = _selectedStudent ?? widget.preFilledStudent!;
-                        final meeting = MeetingLogModel(
-                          id: const Uuid().v4(),
-                          studentId: student.id,
+                        final meeting = MeetingModel(
+                          id: '', // Backend assigns ID
+                          title: _agendaController.text,
+                          description: 'Individual meeting with ${student.fullName}',
+                          date: DateFormat('yyyy-MM-dd').format(meetingDate),
+                          time: DateFormat('HH:mm').format(meetingDate),
+                          link: _linkController.text.trim(),
                           mentorId: mentor.id,
-                          date: meetingDate,
-                          agenda: _agendaController.text,
-                          discussion: '',
-                          issues: '',
-                          suggestions: '',
-                          attended: false,
-                          type: 'One-to-one', 
+                          studentId: student.id,
+                          status: 'Scheduled',
+                          type: 'One-on-One',
                         );
-                        await mentorProvider.scheduleMeetingLog(meeting);
+                        await mentorProvider.scheduleVideoMeeting(meeting);
                       } else {
-                        // Group Meeting
-                         final newMeetings = _selectedGroupStudents.map((student) {
-                          return MeetingLogModel(
-                            id: const Uuid().v4(),
-                            studentId: student.id,
-                            mentorId: mentor.id,
-                            date: meetingDate,
-                            agenda: _agendaController.text,
-                            discussion: '',
-                            issues: '',
-                            suggestions: '',
-                            attended: false,
-                            type: 'Group',
-                          );
-                        }).toList();
-                        await mentorProvider.scheduleMultipleMeetings(newMeetings);
+                        // Group Meeting (Batch Meeting)
+                        final meeting = MeetingModel(
+                          id: '',
+                          title: _agendaController.text,
+                          description: 'Batch meeting for selected students',
+                          date: DateFormat('yyyy-MM-dd').format(meetingDate),
+                          time: DateFormat('HH:mm').format(meetingDate),
+                          link: _linkController.text.trim(),
+                          mentorId: mentor.id,
+                          batchId: 'BATCH-${DateTime.now().millisecondsSinceEpoch}',
+                          status: 'Scheduled',
+                          type: 'Group',
+                        );
+                        await mentorProvider.scheduleVideoMeeting(meeting);
                       }
 
                       if (context.mounted) {

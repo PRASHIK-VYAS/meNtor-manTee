@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'dart:ui';
 import '../../providers/auth_provider.dart';
 
+
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -105,33 +106,116 @@ class _SignupScreenState extends State<SignupScreen> {
           'mentorCode': _mentorCodeController.text.trim(),
         });
 
-        final success = await authProvider.signUp(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-          additionalData: additionalData,
-        );
+        final success = await authProvider.sendRegistrationOTP(_emailController.text.trim());
 
         if (success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Account created successfully! Please login.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.pop(context); // Go back to Login screen
+          setState(() => _isLoading = false);
+          _showOTPDialog(context, authProvider, additionalData);
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Signup failed: ${e.toString()}')),
+            SnackBar(content: Text('Failed to request OTP: ${e.toString()}')),
           );
         }
-      } finally {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
+        setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _showOTPDialog(BuildContext context, AuthProvider authProvider, Map<String, dynamic> additionalData) {
+    final otpController = TextEditingController();
+    bool isVerifying = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Text('Verify Email', style: TextStyle(fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Enter the 6-digit code sent to your email.', textAlign: TextAlign.center),
+                  const SizedBox(height: 20),
+                  TextField(
+                    controller: otpController,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      hintText: '000000',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isVerifying ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                ),
+                ElevatedButton(
+                  onPressed: isVerifying
+                      ? null
+                      : () async {
+                          if (otpController.text.length != 6) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please enter a valid 6-digit OTP')),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() => isVerifying = true);
+
+                          try {
+                            final success = await authProvider.signUp(
+                              email: _emailController.text.trim(),
+                              password: _passwordController.text.trim(),
+                              otp: otpController.text.trim(),
+                              additionalData: additionalData,
+                            );
+
+                            if (success && mounted) {
+                              Navigator.pop(context); // Close dialog
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Account created successfully! Please login.'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                              Navigator.pop(context); // Go back to Login screen
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Registration failed: ${e.toString()}')),
+                              );
+                            }
+                            setDialogState(() => isVerifying = false);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.black,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: isVerifying
+                      ? const SizedBox(
+                          height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Verify & Register'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override

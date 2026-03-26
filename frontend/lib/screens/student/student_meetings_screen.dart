@@ -129,22 +129,43 @@ class StudentMeetingsScreen extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () async {
-                  if (meeting.link.isEmpty) return;
-                  final url = Uri.parse(meeting.link.startsWith('http')
-                      ? meeting.link
-                      : 'https://${meeting.link}');
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  } else {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                            content: Text('Could not launch ${meeting.link}')),
-                      );
-                    }
-                  }
-                },
+                onPressed: meeting.link.isEmpty
+                    ? null
+                    : () async {
+                        final trimmedLink = meeting.link.trim();
+                        final url = Uri.tryParse(trimmedLink.startsWith('http')
+                            ? trimmedLink
+                            : 'https://$trimmedLink');
+                        if (url != null) {
+                          try {
+                            final launched = await launchUrl(url,
+                                mode: LaunchMode.externalApplication);
+                            if (!launched && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content:
+                                        Text('Could not launch meeting link')),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content:
+                                        Text('Error launching meeting: $e')),
+                              );
+                            }
+                          }
+                        } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text('Invalid meeting link: ${meeting.link}')),
+                            );
+                          }
+                        }
+                      },
                 icon: const Icon(Icons.videocam_rounded),
                 label: const Text('JOIN VIA GOOGLE MEET',
                     style: TextStyle(

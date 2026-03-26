@@ -6,6 +6,7 @@ const broadcastController = require('../controller/broadcastController');
 router.use(authMiddleware);
 
 router.get('/', broadcastController.getAll);
+router.get('/mentor/:mentorId', broadcastController.getByMentorId);
 router.post('/', broadcastController.create);
 router.get('/:id', broadcastController.getById);
 router.put('/:id', broadcastController.update);

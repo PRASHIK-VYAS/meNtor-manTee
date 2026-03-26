@@ -27,9 +27,17 @@ class NotificationModel {
       message: json['message'] ?? '',
       type: json['type'] ?? 'GENERAL',
       isRead: json['isRead'] ?? false,
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'])
-          : DateTime.now(),
+      createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
     );
+  }
+
+  static DateTime _parseDate(dynamic dateStr) {
+    if (dateStr == null) return DateTime.now();
+    try {
+      return DateTime.parse(dateStr.toString());
+    } catch (e) {
+      print('Date formatting error: $e for string $dateStr');
+      return DateTime.now();
+    }
   }
 }

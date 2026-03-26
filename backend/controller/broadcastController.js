@@ -27,7 +27,21 @@ const create = async (req, res) => {
     }
 };
 
+const getByMentorId = async (req, res) => {
+    try {
+        const broadcasts = await Broadcast.findAll({
+            where: { mentor_id: req.params.mentorId },
+            order: [['createdAt', 'DESC']]
+        });
+        return res.status(200).json(broadcasts);
+    } catch (error) {
+        console.error('Error fetching broadcasts:', error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 module.exports = {
     ...baseCrud,
-    create
+    create,
+    getByMentorId
 };

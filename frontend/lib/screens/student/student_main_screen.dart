@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../providers/notification_provider.dart';
 import 'student_dashboard_screen.dart';
 import 'student_profile_screen.dart';
 import 'academic_records_screen.dart';
@@ -24,6 +25,15 @@ class StudentMainScreen extends StatefulWidget {
 
 class _StudentMainScreenState extends State<StudentMainScreen> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<NotificationProvider>(context, listen: false)
+          .fetchNotifications();
+    });
+  }
 
   final List<Widget> _screens = [
     const StudentDashboardScreen(),

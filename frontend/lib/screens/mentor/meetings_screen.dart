@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../../providers/mentor_provider.dart';
 import 'sheets/schedule_meeting_sheet.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MeetingsScreen extends StatelessWidget {
   const MeetingsScreen({super.key});
@@ -11,7 +11,7 @@ class MeetingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // Force refresh
     final mentorProvider = Provider.of<MentorProvider>(context);
-    final meetings = mentorProvider.allMeetings;
+    final meetings = mentorProvider.meetings;
     final assignedStudents = mentorProvider.assignedStudents;
         
     return Scaffold(
@@ -109,31 +109,40 @@ class MeetingsScreen extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.calendar_month, size: 16, color: Colors.black54),
-                                const SizedBox(width: 8),
-                                Text(
-                                  DateFormat('MMM d, y • h:mm a').format(meeting.date),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                 const Icon(Icons.calendar_month, size: 16, color: Colors.black54),
+                                 const SizedBox(width: 8),
+                                 Text(
+                                   '${meeting.date} • ${meeting.time}',
+                                   style: const TextStyle(
+                                     fontWeight: FontWeight.bold,
+                                     fontSize: 14,
+                                   ),
+                                 ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: meeting.status == 'Scheduled'
+                                        ? Colors.orange.withOpacity(0.1)
+                                        : Colors.green.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    meeting.status.toUpperCase(),
+                                    style: TextStyle(
+                                      color: meeting.status == 'Scheduled'
+                                          ? Colors.blue
+                                          : Colors.green,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: meeting.attended ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                meeting.attended ? 'COMPLETED' : 'SCHEDULED',
-                                style: TextStyle(
-                                  color: meeting.attended ? Colors.green : Colors.orange,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
                             ),
                           ],
                         ),
@@ -156,10 +165,168 @@ class MeetingsScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                            'Agenda: ${meeting.agenda ?? "N/A"}',
-                            style: const TextStyle(color: Colors.black87),
-                          ),
+                           Text(
+                             'Topic: ${meeting.title}',
+                             style: const TextStyle(fontWeight: FontWeight.bold),
+                           ),
+                           const SizedBox(height: 4),
+                           Text(
+                             meeting.description,
+                             style: const TextStyle(color: Colors.black87),
+                           ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            if (meeting.link.isNotEmpty)
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () async {
+                                    final trimmedLink = meeting.link.trim();
+                                    final url = Uri.tryParse(trimmedLink.startsWith('http')
+                                        ? trimmedLink
+                                        : 'https://$trimmedLink');
+                                    if (url != null) {
+                                      try {
+                                        final launched = await launchUrl(url,
+                                            mode: LaunchMode.externalApplication);
+                                        if (!launched && context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                                content:
+                                                    Text('Could not launch meeting link')),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                                content:
+                                                    Text('Error launching meeting: $e')),
+                                          );
+                                        }
+                                      }
+                                    } else {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                              content: Text('Invalid meeting link')),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  icon: const Icon(Icons.videocam,
+                                      color: Colors.white, size: 18),
+                                  label: const Text('JOIN MEETING',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12)),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.black,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                              ),
+                            if (meeting.link.isNotEmpty)
+                              const SizedBox(width: 8),
+                            if (meeting.link.isNotEmpty)
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final updatedMeeting =
+                                        meeting.copyWith(link: '');
+                                    await mentorProvider
+                                        .updateMeeting(updatedMeeting);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text('Link unsent!')),
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(Icons.link_off,
+                                      color: Colors.black54, size: 18),
+                                  label: const Text('UNSEND LINK',
+                                      style: TextStyle(
+                                          color: Colors.black54,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12)),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    side: const BorderSide(color: Colors.black12),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                              ),
+                            if (meeting.link.isEmpty)
+                              const Expanded(
+                                child: Center(
+                                  child: Text('No link provided',
+                                      style: TextStyle(
+                                          color: Colors.grey, fontSize: 12)),
+                                ),
+                              ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Delete Meeting'),
+                                    content: const Text(
+                                        'Are you sure you want to delete this meeting? This action cannot be undone.'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('CANCEL'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () async {
+                                          Navigator.pop(context);
+                                          try {
+                                            await mentorProvider
+                                                .deleteMeeting(meeting.id);
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                    content: Text(
+                                                        'Meeting deleted successfully')),
+                                              );
+                                            }
+                                          } catch (e) {
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                    content: Text(
+                                                        'Error deleting meeting: $e')),
+                                              );
+                                            }
+                                          }
+                                        },
+                                        child: const Text('DELETE',
+                                            style:
+                                                TextStyle(color: Colors.red)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.delete_outline,
+                                  color: Colors.redAccent),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.red.withOpacity(0.05),
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

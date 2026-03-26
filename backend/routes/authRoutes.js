@@ -4,7 +4,8 @@ const authController = require('../controller/authController');
 const authMiddleware = require('../middleware/authMiddleware');
 
 router.post('/login', authController.login);
-// router.post('/register/mentor', authController.registerMentor); // Disabled for user security
+router.post('/send-registration-otp', authController.sendRegistrationOTP);
+router.post('/register/mentor', authController.registerMentor);
 router.post('/register/student', authController.registerStudent);
 router.get('/profile', authMiddleware, authController.getProfile);
 router.patch('/profile', authMiddleware, authController.updateProfile);

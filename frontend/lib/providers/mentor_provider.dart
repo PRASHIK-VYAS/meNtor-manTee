@@ -110,6 +110,33 @@ class MentorProvider with ChangeNotifier {
     }
   }
 
+  Future<void> deleteMeeting(String meetingId) async {
+    try {
+      await _apiService.delete('/meetings/$meetingId');
+      _meetings.removeWhere((m) => m.id == meetingId);
+      notifyListeners();
+    } catch (e) {
+      print('Error deleting meeting: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateMeeting(MeetingModel meeting) async {
+    try {
+      final response =
+          await _apiService.put('/meetings/${meeting.id}', meeting.toMap());
+      final updatedMeeting = MeetingModel.fromMap(response);
+      final index = _meetings.indexWhere((m) => m.id == meeting.id);
+      if (index != -1) {
+        _meetings[index] = updatedMeeting;
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error updating meeting: $e');
+      rethrow;
+    }
+  }
+
   Future<void> selectStudent(String studentId) async {
     try {
       _isLoading = true;
@@ -428,11 +455,12 @@ class MentorProvider with ChangeNotifier {
   }
 
   List<StudentModel> getFilteredStudents(String filter) {
-    // Logic from original file to filter _assignedStudents
     switch (filter) {
       case 'attention':
+        // Only students with low CGPA or many pending tasks need attention.
+        // Students with CGPA >= 7.0 AND 0 pending tasks are considered performing well.
         return _assignedStudents
-            .where((s) => s.currentCGPA < 6.0 || s.pendingTasks > 2)
+            .where((s) => s.currentCGPA < 7.0 || s.pendingTasks > 2)
             .toList();
       case 'pending':
         return _assignedStudents
@@ -440,8 +468,9 @@ class MentorProvider with ChangeNotifier {
                 .any((status) => status == 'Pending Approval'))
             .toList();
       case 'low_docs':
+        // Exclude students who have 100% document completion.
         return _assignedStudents
-            .where((s) => s.documentCompletion < 50)
+            .where((s) => s.documentCompletion < 100)
             .toList();
       default:
         return _assignedStudents;

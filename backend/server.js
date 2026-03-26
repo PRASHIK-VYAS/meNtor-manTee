@@ -60,7 +60,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/semesters', semesterRoutes);
 app.use('/api/subject-marks', subjectMarkRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/notifications', notificationRoutesq);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler
 app.use((req, res) => {

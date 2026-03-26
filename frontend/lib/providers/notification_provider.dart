@@ -1,4 +1,5 @@
 // frontend\lib\providers\notification_provider.dart
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/notification_model.dart';
 import '../services/api_service.dart';
@@ -13,6 +14,7 @@ class NotificationProvider with ChangeNotifier {
   bool _isLoading = false;
   int _unreadCount = 0;
   String? _lastUserId;
+  Timer? _pollingTimer;
 
   List<NotificationModel> get notifications => _notifications;
   bool get isLoading => _isLoading;
@@ -23,13 +25,26 @@ class NotificationProvider with ChangeNotifier {
       if (_lastUserId != authProvider.userId) {
         _lastUserId = authProvider.userId;
         fetchNotifications();
+        // Start periodic polling every 30 seconds
+        _pollingTimer?.cancel();
+        _pollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+          fetchNotifications();
+        });
       }
     } else {
+      _pollingTimer?.cancel();
+      _pollingTimer = null;
       _lastUserId = null;
       _notifications = [];
       _unreadCount = 0;
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> fetchNotifications() async {

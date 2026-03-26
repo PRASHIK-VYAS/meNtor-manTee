@@ -144,9 +144,29 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  Future<bool> sendRegistrationOTP(String email) async {
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _apiService.post('/auth/send-registration-otp', {
+        'email': email.trim(),
+      });
+
+      return true;
+    } catch (e) {
+      print('Registration OTP request error: $e');
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> signUp({
     required String email,
     required String password,
+    required String otp, // Add OTP requirement
     Map<String, dynamic>? additionalData,
   }) async {
     try {
@@ -157,6 +177,7 @@ class AuthProvider with ChangeNotifier {
       await _apiService.post('/auth/register/student', {
         'email': email,
         'password': password,
+        'otp': otp, // Send OTP to backend
         ...?additionalData,
       });
 

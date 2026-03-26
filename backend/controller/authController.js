@@ -1,15 +1,24 @@
 const { Student, Mentor } = require('../model');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const SALT_ROUNDS = 10;
 
 exports.registerMentor = async (req, res) => {
     try {
         let { email, password, fullName, full_name, department, mentorCode, mentor_code, phoneNumber, phone_number } = req.body;
         const finalFullName = (full_name || fullName || "").trim();
-        const finalPassword = (password || "").trim();
+        const rawPassword = (password || "").trim();
+        const finalPassword = await bcrypt.hash(rawPassword, SALT_ROUNDS);
         const finalEmail = (email || "").toLowerCase().trim();
 
-        if (!finalEmail || !finalPassword || !finalFullName || !department) {
-            return res.status(400).json({ message: 'Missing required fields' });
+        if (!finalEmail || !password || !finalFullName || !department || !req.body.otp) {
+            return res.status(400).json({ message: 'Missing required fields (including OTP)' });
+        }
+
+        // Verify OTP
+        const storedOtp = otpStore.get(finalEmail);
+        if (!storedOtp || storedOtp.otp !== req.body.otp || Date.now() > storedOtp.expiry) {
+            return res.status(400).json({ message: 'Invalid or expired OTP' });
         }
 
         const existingMentor = await Mentor.findOne({ where: { email: finalEmail } });
@@ -34,6 +43,13 @@ exports.registerMentor = async (req, res) => {
             role: 'mentor'
         });
 
+        // Clean up OTP
+        otpStore.delete(finalEmail);
+
+        // Send Welcome Email
+        emailService.sendWelcomeEmail(mentor.email, mentor.full_name, 'Mentor')
+            .catch(e => console.error('Failed to send mentor welcome email:', e.message));
+
         res.status(201).json({ message: 'Mentor registered successfully', user: mentor });
     } catch (error) {
         console.error('Register Mentor Error:', error);
@@ -52,12 +68,20 @@ exports.registerStudent = async (req, res) => {
         } = req.body;
 
         const finalEmail = (email || "").toLowerCase().trim();
-        const finalPassword = (password || "").trim();
+        const rawPassword = (password || "").trim();
         const finalFullName = (full_name || fullName || "").trim();
         const finalStudentId = (student_id || studentId || "").trim();
 
-        if (!finalEmail || !finalPassword || !finalFullName || !department || !finalStudentId) {
-            return res.status(400).json({ message: 'Missing required fields' });
+        if (!finalEmail || !rawPassword || !finalFullName || !department || !finalStudentId || !req.body.otp) {
+            return res.status(400).json({ message: 'Missing required fields (including OTP)' });
+        }
+
+        const finalPassword = await bcrypt.hash(rawPassword, SALT_ROUNDS);
+
+        // Verify OTP
+        const storedOtp = otpStore.get(finalEmail);
+        if (!storedOtp || storedOtp.otp !== req.body.otp || Date.now() > storedOtp.expiry) {
+            return res.status(400).json({ message: 'Invalid or expired OTP' });
         }
 
         const existingStudent = await Student.findOne({ where: { email: finalEmail } });
@@ -94,6 +118,13 @@ exports.registerStudent = async (req, res) => {
             }
         });
 
+        // Clean up OTP
+        otpStore.delete(finalEmail);
+
+        // Send Welcome Email
+        emailService.sendWelcomeEmail(student.email, student.full_name, 'Student')
+            .catch(e => console.error('Failed to send student welcome email:', e.message));
+
         res.status(201).json({ message: 'Student registered successfully', user: student });
     } catch (error) {
         console.error('Register Student Error:', error);
@@ -125,12 +156,8 @@ exports.login = async (req, res) => {
         }
 
         console.log(`[DIAGNOSTIC] User found in ${role} table.`);
-        
-        // EXTREMELY IMPORTANT: STRING COMPARISON FOR PLAIN TEXT
-        const isMatch = (finalPassword === user.password);
-        
-        console.log(`[DIAGNOSTIC] Comparing: "${finalPassword}" against database length: ${user.password ? user.password.length : 0}`);
-        console.log(`[DIAGNOSTIC] Match result: ${isMatch}`);
+
+        const isMatch = await bcrypt.compare(finalPassword, user.password);
 
         if (!isMatch) {
             return res.status(401).json({ message: 'Invalid credentials' });
@@ -235,6 +262,50 @@ exports.updateProfile = async (req, res) => {
     }
 };
 
+exports.sendRegistrationOTP = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) return res.status(400).json({ message: 'Email is required' });
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // 1. Check if user already exists
+        let user = await Student.findOne({ where: { email: normalizedEmail } });
+        if (!user) {
+            user = await Mentor.findOne({ where: { email: normalizedEmail } });
+        }
+        
+        if (user) {
+            return res.status(409).json({ message: 'User already exists with this email' });
+        }
+
+        // 2. Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // 3. Store OTP with Expiry (10 minutes)
+        otpStore.set(normalizedEmail, {
+            otp,
+            expiry: Date.now() + 10 * 60 * 1000 // 10 mins
+        });
+
+        // 4. Send Verification Email
+        try {
+            await emailService.sendVerificationOTPEmail(normalizedEmail, otp);
+            console.log(`✅ Registration OTP Email sent to ${normalizedEmail}`);
+        } catch (mailError) {
+            console.error('Failed to send registration OTP email:', mailError.message);
+            return res.status(500).json({ message: 'Failed to send verification email. Please try again later.' });
+        }
+
+        return res.status(200).json({ 
+            message: 'A verification code has been sent to your email address.', 
+        });
+
+    } catch (error) {
+        console.error('Send Registration OTP Error:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 // --- FORGOT PASSWORD FLOW ---
 // In-memory store for OTPs (For Production, use Redis or a Database Table)
 const otpStore = new Map();
@@ -335,8 +406,9 @@ exports.resetPassword = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Save new password as plain text
-        await user.update({ password: newPassword });
+        // Save new password as hashed
+        const hashedNewPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+        await user.update({ password: hashedNewPassword });
 
         // Clean up OTP to prevent reuse
         otpStore.delete(normalizedEmail);

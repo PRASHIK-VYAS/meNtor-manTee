@@ -34,18 +34,39 @@ class _StudentListScreenState extends State<StudentListScreen> {
     super.dispose();
   }
 
+  String _getTitle() {
+    switch (widget.filter) {
+      case 'attention':
+        return 'Attention Needed';
+      case 'pending':
+        return 'Pending Review';
+      case 'low_docs':
+        return 'Low Doc Alerts';
+      case 'all':
+        return 'All Students';
+      default:
+        return 'Students';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.filter == null 
-            ? 'All Students' 
-            : '${widget.filter![0].toUpperCase()}${widget.filter!.substring(1)} Students'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(
+          _getTitle(),
+          style: const TextStyle(
+            fontWeight: FontWeight.w900,
+            color: Colors.black,
+            letterSpacing: -0.5,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.black),
+        surfaceTintColor: Colors.transparent,
+      ),
       body: FutureBuilder(
         future: _loadDataFuture,
         builder: (context, snapshot) {

@@ -39,7 +39,7 @@ class _MeetingManagementScreenState extends State<MeetingManagementScreen> {
                   padding: const EdgeInsets.all(24),
                   itemCount: meetings.length,
                   itemBuilder: (context, index) {
-                    return _buildMeetingCard(context, meetings[index]);
+                    return _buildMeetingCard(context, meetings[index], provider);
                   },
                 ),
         );
@@ -68,7 +68,8 @@ class _MeetingManagementScreenState extends State<MeetingManagementScreen> {
     );
   }
 
-  Widget _buildMeetingCard(BuildContext context, MeetingModel meeting) {
+  Widget _buildMeetingCard(
+      BuildContext context, MeetingModel meeting, MentorProvider provider) {
     final bool isCompleted = meeting.status == 'Completed';
 
     return Container(
@@ -141,56 +142,139 @@ class _MeetingManagementScreenState extends State<MeetingManagementScreen> {
             const SizedBox(height: 24),
             Row(
               children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      if (meeting.link.isNotEmpty) {
-                        final uri = Uri.tryParse(meeting.link);
-                        if (uri != null && await canLaunchUrl(uri)) {
-                          await launchUrl(uri,
-                              mode: LaunchMode.externalApplication);
-                        } else {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Could not open meeting link')),
-                            );
+                if (meeting.link.isNotEmpty)
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        if (meeting.link.isNotEmpty) {
+                          final trimmedLink = meeting.link.trim();
+                          final url = Uri.tryParse(trimmedLink.startsWith('http')
+                              ? trimmedLink
+                              : 'https://$trimmedLink');
+                          if (url != null) {
+                            try {
+                              final launched = await launchUrl(url,
+                                  mode: LaunchMode.externalApplication);
+                              if (!launched && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content:
+                                          Text('Could not launch meeting link')),
+                                );
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content:
+                                          Text('Error launching meeting: $e')),
+                                );
+                              }
+                            }
+                          } else {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Invalid meeting link')),
+                              );
+                            }
                           }
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('No meeting link available')),
+                          );
                         }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('No meeting link available')),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                      },
+                      icon: const Icon(Icons.videocam, size: 18),
+                      label: const Text('JOIN MEETING',
+                          style: TextStyle(fontWeight: FontWeight.w900)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
                     ),
-                    child: const Text('JOIN MEETING',
-                        style: TextStyle(fontWeight: FontWeight.w900)),
                   ),
-                ),
+                if (meeting.link.isNotEmpty) const SizedBox(width: 8),
+                if (meeting.link.isNotEmpty)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final updatedMeeting = meeting.copyWith(link: '');
+                        await provider.updateMeeting(updatedMeeting);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Link unsent!')),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.link_off, size: 18),
+                      label: const Text('UNSEND LINK',
+                          style: TextStyle(fontWeight: FontWeight.w900)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.black54,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: Colors.black12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                if (meeting.link.isEmpty)
+                  const Expanded(
+                    child: Center(
+                      child: Text('No link provided',
+                          style: TextStyle(color: Colors.grey, fontSize: 13)),
+                    ),
+                  ),
                 const SizedBox(width: 12),
                 IconButton(
                   onPressed: () {
-                    if (meeting.link.isNotEmpty) {
-                      Clipboard.setData(ClipboardData(text: meeting.link));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Meeting link copied to clipboard!'),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    }
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Meeting'),
+                        content: const Text(
+                            'Are you sure you want to delete this meeting? This action cannot be undone.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('CANCEL'),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              try {
+                                await provider.deleteMeeting(meeting.id);
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content:
+                                            Text('Meeting deleted successfully')),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text('Error deleting meeting: $e')),
+                                  );
+                                }
+                              }
+                            },
+                            child: const Text('DELETE',
+                                style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    );
                   },
-                  icon: const Icon(Icons.copy),
+                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor: Colors.red.withOpacity(0.05),
                     padding: const EdgeInsets.all(16),
                   ),
                 ),

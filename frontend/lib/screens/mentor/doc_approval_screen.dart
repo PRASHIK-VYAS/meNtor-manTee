@@ -33,18 +33,26 @@ class _DocApprovalScreenState extends State<DocApprovalScreen>
     super.dispose();
   }
 
-  /// Approve OR reject a pending document uploaded by a student.
-  /// Updates the student's documentStatuses map via the provider.
+  /// Approve OR reject a pending document.
   Future<void> _handleApproval(BuildContext context, StudentModel student,
-      String docName, bool approved) async {
+      String docName, bool approved,
+      {String? requestId}) async {
     final mentorProvider = Provider.of<MentorProvider>(context, listen: false);
 
-    // Use dedicated provider method — it patches /mentors/students/:id
-    await mentorProvider.updateStudentDocumentStatus(
-      student.id,
-      docName,
-      approved ? 'Approved' : 'Rejected',
-    );
+    if (requestId != null) {
+      if (approved) {
+        await mentorProvider.approveDocumentRequest(requestId);
+      } else {
+        await mentorProvider.rejectDocumentRequest(
+            requestId, 'Rejected by mentor');
+      }
+    } else {
+      await mentorProvider.updateStudentDocumentStatus(
+        student.id,
+        docName,
+        approved ? 'Approved' : 'Rejected',
+      );
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -180,8 +188,8 @@ class _DocApprovalScreenState extends State<DocApprovalScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildApprovalsTab(const ['Pending Approval']),
-          _buildRequestsTab(const ['Pending', 'Uploaded']),
+          _buildApprovalsTab(const ['Pending Approval', 'Uploaded']),
+          _buildRequestsTab(const ['Pending']),
           _buildHistoryTab(),
         ],
       ),
@@ -206,6 +214,8 @@ class _DocApprovalScreenState extends State<DocApprovalScreen>
       builder: (context, mentorProvider, child) {
         // Build flat list of docs matching status filters
         final List<Map<String, dynamic>> flatDocs = [];
+
+        // 1. Check general document statuses from student models
         for (var student in mentorProvider.assignedStudents) {
           student.documentStatuses.forEach((docName, status) {
             if (statusFilters.contains(status)) {
@@ -215,9 +225,40 @@ class _DocApprovalScreenState extends State<DocApprovalScreen>
                 'status': status,
                 'studentName': student.fullName,
                 'studentId': student.studentId,
+                'requestId': null, // General document
+                'filePath': student.documentFilePaths[docName],
               });
             }
           });
+        }
+
+        // 2. Check mentor-initiated document requests
+        for (var req in mentorProvider.documentRequests) {
+          if (statusFilters.contains(req.status)) {
+            // Need to find the student model
+            final student = mentorProvider.assignedStudents.firstWhere(
+              (s) => s.id == req.studentId,
+              orElse: () => StudentModel(
+                  id: req.studentId,
+                  email: '',
+                  fullName: 'Unknown',
+                  studentId: '',
+                  department: '',
+                  admissionType: '',
+                  dateOfBirth: DateTime.now(),
+                  dateOfJoining: DateTime.now()),
+            );
+
+            flatDocs.add({
+              'student': student,
+              'docName': req.title,
+              'status': req.status,
+              'studentName': student.fullName,
+              'studentId': student.studentId,
+              'requestId': req.id, // Mentor-initiated
+              'filePath': req.filePath,
+            });
+          }
         }
 
         // Apply search filter
@@ -261,7 +302,8 @@ class _DocApprovalScreenState extends State<DocApprovalScreen>
           itemBuilder: (context, index) {
             final doc = filteredDocs[index];
             final student = doc['student'] as StudentModel;
-            final bool isPending = doc['status'] == 'Pending Approval';
+            final bool isPending =
+                doc['status'] == 'Pending Approval' || doc['status'] == 'Uploaded';
 
             return Container(
               margin: const EdgeInsets.only(bottom: 16),
@@ -342,7 +384,8 @@ class _DocApprovalScreenState extends State<DocApprovalScreen>
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () => _handleApproval(
-                                context, student, doc['docName'], false),
+                                context, student, doc['docName'], false,
+                                requestId: doc['requestId']),
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(color: Colors.redAccent),
                               foregroundColor: Colors.redAccent,
@@ -359,7 +402,8 @@ class _DocApprovalScreenState extends State<DocApprovalScreen>
                         Expanded(
                           child: ElevatedButton(
                             onPressed: () => _handleApproval(
-                                context, student, doc['docName'], true),
+                                context, student, doc['docName'], true,
+                                requestId: doc['requestId']),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.black,
                               foregroundColor: Colors.white,
@@ -378,9 +422,7 @@ class _DocApprovalScreenState extends State<DocApprovalScreen>
                       Expanded(
                         child: OutlinedButton(
                           onPressed: () => _viewDocument(
-                              context,
-                              doc['docName'],
-                              student.documentFilePaths[doc['docName']]),
+                              context, doc['docName'], doc['filePath']),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -426,10 +468,8 @@ class _DocApprovalScreenState extends State<DocApprovalScreen>
               ],
             ),
           ),
-          // History of autonomous approvals
+          // Unified history of all approvals (General + Mentor-initiated)
           _buildApprovalsTab(const ['Approved', 'Rejected'], isHistory: true),
-          // History of mentor requests
-          _buildRequestsTab(const ['Approved', 'Rejected'], isHistory: true),
         ],
       ),
     );
