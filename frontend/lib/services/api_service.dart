@@ -50,7 +50,7 @@ class ApiService {
     try {
       final response = await http
           .get(url, headers: headers)
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 60));
       return _handleResponse(response);
     } catch (e) {
       print('API Error (GET $endpoint): $e');
@@ -71,7 +71,7 @@ class ApiService {
             headers: headers,
             body: jsonEncode(data),
           )
-          .timeout(const Duration(seconds: 15));
+          .timeout(const Duration(seconds: 60));
       return _handleResponse(response);
     } catch (e) {
       print('API Error (POST $endpoint): $e');

@@ -102,13 +102,16 @@ const startServer = async () => {
 
     console.log('Database models synced');
 
-    // Automatically kill any existing process on the port
-    const kill = require('kill-port');
-    try {
-      await kill(port, 'tcp');
-      console.log(`Port ${port} cleared`);
-    } catch (e) {
-      // Ignore errors if port was already free
+    // Automatically kill any existing process on the port (dev only)
+    // kill-port is a devDependency, not available in production (Render)
+    if (process.env.NODE_ENV !== 'production') {
+      try {
+        const kill = require('kill-port');
+        await kill(port, 'tcp');
+        console.log(`Port ${port} cleared`);
+      } catch (e) {
+        // Ignore errors if port was already free or kill-port not installed
+      }
     }
 
     server = app.listen(port, () => {
