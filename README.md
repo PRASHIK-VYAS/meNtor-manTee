@@ -1,85 +1,76 @@
-# MentorTrack - Full Stack Flutter & Node.js Application
+# Mentor Mentee App
 
-A mentorship management system built with Flutter (Frontend) and Express.js with Supabase (Backend).
+Full-stack mentor-mentee management system with:
 
-## 🚀 Getting Started
+- `frontend/`: Flutter app
+- `backend/`: Node.js + Express API using PostgreSQL via Supabase
 
-### 1. Backend Setup (`backend-express/`)
+## Repo Structure
 
-1.  **Install Dependencies:**
-    ```bash
-    cd backend-express
-    npm install
-    ```
-2.  **Environment Variables:**
-    Create a `.env` file in `backend-express/` with:
-    ```env
-    PORT=5000
-    SUPABASE_URL=your_supabase_url
-    SUPABASE_KEY=your_supabase_anon_key
-    JWT_SECRET=your_jwt_secret
-    ```
-3.  **Database Migration:**
-    Copy the contents of `supabase_setup.sql` into the Supabase SQL Editor and run it to create the required tables.
-4.  **Seed Data:**
-    Populate the database with test students, mentors, and sample records:
-    ```bash
-    npm run seed
-    ```
-5.  **Start Server:**
-    ```bash
-    npm start
-    ```
+```text
+mentor-mentee-app/
+  backend/   # Render service target
+  frontend/  # Flutter client
+  render.yaml
+```
 
----
+## Backend Setup
 
-### 2. Physical Device Connectivity (USB Debugging)
+```bash
+cd backend
+npm install
+```
 
-To connect your physical Android device to the local backend:
+Create `backend/.env`:
 
-1.  **Enable USB Debugging** on your phone.
-2.  **Create a Tunnel:** Run this command on your PC (find `adb` in your Android SDK platform-tools):
-    ```powershell
-    # Windows Example:
-    & "$env:LOCALAPPDATA\Android\sdk\platform-tools\adb.exe" reverse tcp:5000 tcp:5000
-    ```
-    *This maps `localhost:5000` on your phone to `localhost:5000` on your PC.*
+```env
+PORT=5000
+DATABASE_URL=your_supabase_postgres_connection_string
+JWT_SECRET=your_jwt_secret
+EMAIL_SERVICE=gmail
+EMAIL_USER=your_email_address
+EMAIL_PASS=your_email_app_password
+```
 
----
+Run the backend:
 
-### 3. Frontend Setup (`frontend/`)
+```bash
+cd backend
+npm start
+```
 
-1.  **Install Flutter dependencies:**
-    ```bash
-    cd frontend
-    flutter pub get
-    ```
-2.  **Run the app:**
-    ```bash
-    flutter run
-    ```
+## Frontend Setup
 
----
+```bash
+cd frontend
+flutter pub get
+flutter run
+```
 
-## 🔑 Test Credentials
+Update the API base URL in the Flutter app when needed so it points to your running backend.
 
-All accounts use the password: `password123`
+## Collaborator Notes
 
-| Role | Email |
-| :--- | :--- |
-| **Mentor** | `mentor@pvppcoe.ac.in` |
-| **Student 1** | `student1@pvppcoe.ac.in` |
-| **Student 2** | `student2@pvppcoe.ac.in` |
+- Do not commit `.env` files or secrets.
+- Install dependencies locally with `npm install` in `backend/` and `flutter pub get` in `frontend/`.
+- The backend is intended to run against Supabase PostgreSQL, not the old local SQLite files.
 
----
+## Deploy Backend On Render
 
-## 🌐 Connecting from Other Devices
+This repo includes `render.yaml` for the backend service. The service root is `backend/`.
 
-If you want to run the app on a device **not** connected via USB (e.g., another person's phone on the same Wi-Fi):
+Required environment variables on Render:
 
-1.  Find your PC's **LAN IP Address** (e.g., `192.168.1.5`).
-2.  In `frontend/lib/services/api_service.dart`, change:
-    ```dart
-    static const String baseUrl = 'http://your_lan_ip:5000';
-    ```
-3.  Ensure your PC's firewall allows incoming traffic on port `5000`.
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `EMAIL_SERVICE`
+- `EMAIL_USER`
+- `EMAIL_PASS`
+
+Optional:
+
+- `NODE_ENV=production`
+
+Health check endpoint:
+
+- `/health`

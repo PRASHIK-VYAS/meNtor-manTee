@@ -1,1 +1,0 @@
-﻿const { Client } = require('pg'); require('dotenv').config(); const client = new Client({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }); client.connect().then(() => client.query('SELECT current_database(), current_user')).then(res => { console.log('SUCCESS:', res.rows[0]); client.end(); }).catch(err => console.error('FAILED:', err.message));

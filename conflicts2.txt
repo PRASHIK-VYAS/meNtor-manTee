@@ -1,2 +1,0 @@
-﻿frontend/lib/models/student_model.dart
-frontend/lib/screens/auth/signup_screen.dart

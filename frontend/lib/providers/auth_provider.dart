@@ -69,11 +69,21 @@ class AuthProvider with ChangeNotifier {
         _startNotificationPolling();
         notifyListeners();
       }
-    } catch (e, stackTrace) {
-      print('Auto-login error: $e');
-      print('Stack trace: $stackTrace');
-      await signOut();
-      rethrow; // Re-throw so signIn knows it failed
+    } catch (e) {
+      print('Auto-login error (possibly intermittent): $e');
+      
+      // Only sign out (and delete token) if it's clearly an auth failure (401)
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('401') || 
+          errorStr.contains('unauthorized') || 
+          errorStr.contains('invalid or expired token')) {
+        print('DEBUG: Auth failure detected, signing out.');
+        await signOut();
+      } else {
+        print('DEBUG: Non-auth error (500, network, etc.). Retaining token.');
+      }
+      
+      rethrow; 
     }
   }
 

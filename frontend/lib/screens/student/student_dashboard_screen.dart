@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
-import '../../providers/notification_provider.dart';
 import '../notifications_screen.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
@@ -70,65 +69,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
             children: [
               // ── Hero Welcome Section ──────────────────────────────
               Container(
-                padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+                padding: const EdgeInsets.fromLTRB(24, 72, 24, 40),
                 color: Colors.white,
                 child: Column(
                   children: [
-                    // Top bar: hamburger + notification bell - Stabilized alignment
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                            // Notification bell with badge (aligned to right)
-                            const Spacer(),
-                            Consumer<NotificationProvider>(
-                            builder: (context, notificationProvider, _) =>
-                                Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.notifications_none,
-                                    color: Colors.black,
-                                    size: 28,
-                                  ),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  onPressed: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const NotificationsScreen()),
-                                  ),
-                                ),
-                                if (notificationProvider.unreadCount > 0)
-                                  Positioned(
-                                    right: -4,
-                                    top: -4,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Text(
-                                        '${notificationProvider.unreadCount}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    // No longer needed as bell moved to StudentMainScreen AppBar
+                    const SizedBox(height: 8),
 
                     const SizedBox(height: 24),
 

@@ -284,9 +284,10 @@ class _StudentDocumentsScreenState extends State<StudentDocumentsScreen> {
               separatorBuilder: (ctx, i) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final title = _requiredDocs[index];
-                final status = docStatuses[title] ?? 'Missing';
+                final dbStatus = docStatuses[title] ?? 'Missing';
+                final status = dbStatus == 'Pending' ? 'Missing' : dbStatus;
                 // Only consider it 'uploaded' if it's not the initial 'Pending' or 'Missing' state
-                final isUploaded = status != 'Missing' && status != 'Pending';
+                final isUploaded = status != 'Missing';
 
                 return Container(
                   decoration: BoxDecoration(

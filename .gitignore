@@ -19,6 +19,8 @@ frontend/build/
 *.apk
 *.exe
 *.log
+*.sqlite
+frontend/devtools_options.yaml
 
 # OS
 .DS_Store
@@ -26,3 +28,21 @@ Thumbs.db
 
 # Archives
 *.zip
+
+# Local scratch/debug files
+git_*.txt
+conflicts*.txt
+status_conflict.txt
+commit_files.txt
+output.json
+test_output.json
+test_script.js
+test.txt
+build_output*.txt
+lint_results.txt
+logs.txt
+backend/startup_log.txt
+backend/db_config_log.txt
+backend/test_nodemailer.js
+migrate_semesters.js
+New folder/

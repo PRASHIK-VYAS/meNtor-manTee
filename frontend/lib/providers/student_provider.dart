@@ -63,77 +63,80 @@ class StudentProvider with ChangeNotifier {
     try {
       print('DEBUG: loadStudentData called for Student ID: $studentId');
       _isLoading = true;
-      _dismissedNotifications.clear(); // Reset on fresh load
+      _dismissedNotifications.clear();
       notifyListeners();
 
-      print('DEBUG: Calling Student profile endpoint...');
+      // 1. Critical: Get Student Profile
       final studentResult = await _apiService.get('/students/$studentId');
       _currentStudent = StudentModel.fromMap(studentResult);
-      print('DEBUG: Student profile loaded: ${_currentStudent?.fullName}');
-      
-      final mentorId = _currentStudent?.mentorId;
+      final String? mentorId = _currentStudent?.mentorId;
 
-      print('DEBUG: Calling remaining Student endpoints...');
+      // Helper to fetch data resiliently
+      Future<dynamic> resilientGet(String endpoint, {dynamic defaultValue = const []}) async {
+        try {
+          return await _apiService.get(endpoint);
+        } catch (e) {
+          print('DEBUG: Non-critical endpoint failed ($endpoint): $e');
+          return defaultValue;
+        }
+      }
+
+      // 2. Parallel fetch for all other data
       final results = await Future.wait([
-        _apiService.get('/semesters/student/$studentId'),
-        _apiService.get('/tasks/student/$studentId'),
-        _apiService.get('/certifications/student/$studentId'),
-        _apiService.get('/internships/student/$studentId'),
-        mentorId != null ? _apiService.get('/broadcasts/mentor/$mentorId') : Future.value([]),
-        _apiService.get('/meetings/student/$studentId'),
-        _apiService.get('/documents'),
-        _apiService.get('/activities/student/$studentId'),
+        resilientGet('/semesters/student/$studentId'),
+        resilientGet('/tasks/student/$studentId'),
+        resilientGet('/certifications/student/$studentId'),
+        resilientGet('/internships/student/$studentId'),
+        (mentorId != null && mentorId != 'null') 
+            ? resilientGet('/broadcasts/mentor/$mentorId') 
+            : Future.value([]),
+        resilientGet('/meetings/student/$studentId'),
+        resilientGet('/documents'),
+        resilientGet('/activities/student/$studentId'),
       ]);
-      print('DEBUG: All student data calls completed.');
 
+      // 3. Populate and Parse
       _semesters = (results[0] as List)
           .map((data) => SemesterModel.fromMap(data))
           .toList();
-      print('DEBUG: Loaded ${_semesters.length} semesters');
-
-      _tasks =
-          (results[1] as List).map((data) => TaskModel.fromMap(data)).toList();
-      print('DEBUG: Loaded ${_tasks.length} tasks');
+      
+      _tasks = (results[1] as List)
+          .map((data) => TaskModel.fromMap(data))
+          .toList();
 
       _certifications = (results[2] as List)
           .map((data) => CertificationModel.fromMap(data))
           .toList();
-      print('DEBUG: Loaded ${_certifications.length} certifications');
 
       _internships = (results[3] as List)
           .map((data) => InternshipModel.fromMap(data))
           .toList();
-      print('DEBUG: Loaded ${_internships.length} internships');
 
       _broadcasts = (results[4] as List)
           .map((data) => BroadcastModel.fromMap(data))
           .toList();
-      print('DEBUG: Loaded ${_broadcasts.length} broadcasts');
 
       _meetings = (results[5] as List)
           .map((data) => MeetingModel.fromMap(data))
           .toList();
-      print('DEBUG: Loaded ${_meetings.length} meetings');
 
       _documentRequests = (results[6] as List)
           .map((data) => DocumentRequestModel.fromMap(data))
           .toList();
-      print('DEBUG: Loaded ${_documentRequests.length} documents');
 
       _activities = (results[7] as List)
           .map((data) => ActivityModel.fromMap(data))
           .toList();
-      print('DEBUG: Loaded ${_activities.length} activities');
 
       _calculateStudentMetrics();
-      print('DEBUG: Metrics calculated.');
       _isLoading = false;
       notifyListeners();
     } catch (e, stack) {
       _isLoading = false;
       notifyListeners();
-      print('DEBUG ERROR: loadStudentData failed: $e');
+      print('DEBUG ERROR: Critical failure in loadStudentData: $e');
       print('DEBUG STACK: $stack');
+      rethrow; // Rethrow now so call sites know it failed
     }
   }
 
@@ -527,7 +530,7 @@ class StudentProvider with ChangeNotifier {
             'title': docTitle,
             'description': 'Verification required for $docTitle',
             'file_path': filePath ?? '',
-            'status': 'Pending',
+            'status': 'Pending Approval',
           });
         }
 

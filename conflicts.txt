@@ -1,2 +1,0 @@
-﻿backend/routes/authRoute.js
-package-lock.json

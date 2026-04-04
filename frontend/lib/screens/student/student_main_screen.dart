@@ -15,6 +15,7 @@ import 'student_meetings_screen.dart';
 import 'student_broadcasts_screen.dart';
 import 'student_leaderboard_screen.dart';
 import 'student_ai_summary_screen.dart';
+import '../notifications_screen.dart';
 
 class StudentMainScreen extends StatefulWidget {
   const StudentMainScreen({super.key});
@@ -85,6 +86,48 @@ class _StudentMainScreenState extends State<StudentMainScreen> {
         backgroundColor: _currentIndex == 0 ? Colors.transparent : Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
+        actions: [
+          Consumer<NotificationProvider>(
+            builder: (context, notificationProvider, _) => Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.notifications_none,
+                    color: Colors.black,
+                    size: 26,
+                  ),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const NotificationsScreen()),
+                  ),
+                ),
+                if (notificationProvider.unreadCount > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${notificationProvider.unreadCount}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       drawer: Drawer(
         child: Container(

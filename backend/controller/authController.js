@@ -109,12 +109,14 @@ exports.registerStudent = async (req, res) => {
             mentor_id,
             role: 'student',
             document_statuses: {
-                "10th Marksheet": "Pending",
-                "12th Marksheet": "Pending",
-                "Aadhar Card": "Pending",
-                "College ID": "Pending",
-                "Photo": "Pending",
-                "Signature": "Pending"
+                "Resume": "Missing",
+                "ID Proof": "Missing",
+                "10th Marksheet": "Missing",
+                "12th Marksheet / Diploma": "Missing",
+                "Internship Certificate": "Missing",
+                "College ID": "Missing",
+                "Photo": "Missing",
+                "Signature": "Missing"
             }
         });
 

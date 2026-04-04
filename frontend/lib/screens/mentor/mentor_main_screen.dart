@@ -11,6 +11,7 @@ import 'mentor_leaderboard_screen.dart';
 import 'mentor_activity_approval_screen.dart';
 import 'meeting_management_screen.dart';
 import 'task_assignment_screen.dart';
+import 'mentor_academic_records_screen.dart';
 
 class MentorMainScreen extends StatefulWidget {
   const MentorMainScreen({super.key});
@@ -40,6 +41,7 @@ class _MentorMainScreenState extends State<MentorMainScreen> {
     const TaskAssignmentScreen(),
     const DocApprovalScreen(),
     const MentorActivityApprovalScreen(),
+    const MentorAcademicRecordsScreen(),
   ];
 
   final List<String> _titles = [
@@ -51,6 +53,7 @@ class _MentorMainScreenState extends State<MentorMainScreen> {
     'Assign Tasks',
     'Doc Approvals',
     'Activity Approvals',
+    'Academic Records',
   ];
 
   @override
@@ -154,6 +157,11 @@ class _MentorMainScreenState extends State<MentorMainScreen> {
                       title: 'Activity Approvals',
                       index: 7,
                       selectedIcon: Icons.playlist_add_check_circle),
+                  _buildDrawerItem(
+                      icon: Icons.school_outlined,
+                      title: 'Academic Records',
+                      index: 8,
+                      selectedIcon: Icons.school),
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16),
                     child: Divider(),

@@ -18,14 +18,17 @@ class SubjectMark {
   }
 
   factory SubjectMark.fromMap(Map<String, dynamic> map) {
+    double parseDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return SubjectMark(
-      subjectName: (map['subject_name'] ?? map['subjectName'] ?? '') as String,
-      internal: (map['ia1'] ?? map['internal'] ?? 0.0) is num
-          ? (map['ia1'] ?? map['internal'] as num).toDouble()
-          : 0.0,
-      external: (map['ia2'] ?? map['external'] ?? 0.0) is num
-          ? (map['ia2'] ?? map['external'] as num).toDouble()
-          : 0.0,
+      subjectName: (map['subject_name'] ?? map['subjectName'] ?? '')?.toString() ?? '',
+      internal: parseDouble(map['ia1'] ?? map['internal']),
+      external: parseDouble(map['ia2'] ?? map['external']),
     );
   }
 }
@@ -68,22 +71,26 @@ class SemesterModel {
   }
 
   factory SemesterModel.fromMap(Map<String, dynamic> map) {
+    double parseDouble(dynamic value) {
+      if (value == null) return 0.0;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return SemesterModel(
       id: map['id'],
-      studentId: map['student_id'] ?? map['studentId'],
-      semesterNumber:
-          (map['semester_number'] ?? map['semesterNumber'] ?? 0) as int,
-      sgpa: (map['sgpa'] ?? 0.0) is num ? (map['sgpa'] as num).toDouble() : 0.0,
-      cgpa: (map['cgpa'] ?? 0.0) is num ? (map['cgpa'] as num).toDouble() : 0.0,
-      resultStatus:
-          (map['result_status'] ?? map['resultStatus'] ?? 'Pending') as String,
+      studentId: (map['student_id'] ?? map['studentId'] ?? '').toString(),
+      semesterNumber: int.tryParse((map['semester_number'] ?? map['semesterNumber'] ?? 0).toString()) ?? 0,
+      sgpa: parseDouble(map['sgpa']),
+      cgpa: parseDouble(map['cgpa']),
+      resultStatus: (map['result_status'] ?? map['resultStatus'] ?? 'Pending').toString(),
       resultDate: (map['result_date'] ?? map['resultDate']) != null
-          ? DateTime.parse((map['result_date'] ?? map['resultDate']) as String)
+          ? DateTime.tryParse((map['result_date'] ?? map['resultDate']).toString())
           : null,
-      hasBacklogs:
-          (map['has_backlogs'] ?? map['hasBacklogs'] ?? false) == true ||
-              (map['has_backlogs'] ?? map['hasBacklogs'] ?? 0) == 1,
-      remarks: map['remarks'] as String?,
+      hasBacklogs: (map['has_backlogs'] ?? map['hasBacklogs'] ?? false).toString() == 'true' ||
+                  (map['has_backlogs'] ?? map['hasBacklogs'] ?? 0).toString() == '1',
+      remarks: map['remarks']?.toString(),
       subjects: map['SubjectMarks'] != null
           ? List<SubjectMark>.from(
               (map['SubjectMarks'] as List).map(

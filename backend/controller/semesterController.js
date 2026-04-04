@@ -161,12 +161,23 @@ exports.getByStudentId = async (req, res) => {
 const _syncStudentSemester = async (studentId) => {
   try {
     const { Student } = require('../model');
-    const maxSem = await Semester.max('semester_number', { where: { student_id: studentId } });
-    if (maxSem) {
-      await Student.update({ current_semester: maxSem }, { where: { id: studentId } });
+    // Find the latest semester record
+    const latestSem = await Semester.findOne({
+      where: { student_id: studentId },
+      order: [['semester_number', 'DESC']]
+    });
+
+    if (latestSem) {
+      await Student.update(
+        { 
+          current_semester: Math.min(latestSem.semester_number + 1, 8),
+          current_cgpa: latestSem.cgpa 
+        }, 
+        { where: { id: studentId } }
+      );
     }
   } catch (err) {
-    console.error('Error syncing student semester:', err);
+    console.error('Error syncing student semester/cgpa:', err);
   }
 };
 
