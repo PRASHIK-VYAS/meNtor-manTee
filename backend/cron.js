@@ -1,6 +1,6 @@
 const https = require('https');
 
-const RENDER_URL = process.env.RENDER_URL || 'https://mentora-jz3u.onrender.com/health';
+const RENDER_URL = process.env.RENDER_URL || 'https://mentor-mantee.onrender.com/health';
 
 console.log(`[${new Date().toISOString()}] Starting keep-alive ping to: ${RENDER_URL}`);
 
