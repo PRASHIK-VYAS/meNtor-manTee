@@ -1,31 +1,81 @@
-// backend/services/emailService.js
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
-// Create a transporter using SMTP or a service (e.g., Gmail)
-const transporter = nodemailer.createTransport({
-    service: process.env.EMAIL_SERVICE || 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
+const EMAIL_TIMEOUT_MS = Number(process.env.EMAIL_TIMEOUT_MS || 15000);
+let transporter;
 
-// Verify connection configuration
-transporter.verify((error, success) => {
-    if (error) {
-        console.warn('⚠️ SMTP Connection Warning:', error.message);
-    } else {
-        console.log('✅ SMTP Server reaches successfully');
+function isEmailConfigured() {
+    return Boolean(process.env.EMAIL_USER && process.env.EMAIL_PASS);
+}
+
+function buildTransportOptions() {
+    if (!isEmailConfigured()) {
+        throw new Error('Email service is not configured. Set EMAIL_USER and EMAIL_PASS on the server.');
     }
-});
+
+    const baseOptions = {
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+        connectionTimeout: EMAIL_TIMEOUT_MS,
+        greetingTimeout: EMAIL_TIMEOUT_MS,
+        socketTimeout: EMAIL_TIMEOUT_MS,
+        dnsTimeout: EMAIL_TIMEOUT_MS,
+    };
+
+    if (process.env.SMTP_HOST) {
+        const port = Number(process.env.SMTP_PORT || 587);
+
+        return {
+            ...baseOptions,
+            host: process.env.SMTP_HOST,
+            port,
+            secure:
+                String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' ||
+                port === 465,
+        };
+    }
+
+    return {
+        ...baseOptions,
+        service: process.env.EMAIL_SERVICE || 'gmail',
+    };
+}
+
+function getTransporter() {
+    if (!transporter) {
+        transporter = nodemailer.createTransport(buildTransportOptions());
+    }
+
+    return transporter;
+}
+
+function getFromAddress(senderName) {
+    const senderEmail = process.env.EMAIL_FROM || process.env.EMAIL_USER;
+    return `"${senderName}" <${senderEmail}>`;
+}
+
+async function sendMail(mailOptions) {
+    const activeTransporter = getTransporter();
+
+    try {
+        return await activeTransporter.sendMail(mailOptions);
+    } catch (error) {
+        console.error(
+            `[MAIL] Failed to send "${mailOptions.subject}" to ${mailOptions.to}:`,
+            error.message
+        );
+        throw error;
+    }
+}
 
 /**
  * Sends a 6-digit OTP for password reset.
  */
 exports.sendOTPEmail = async (email, otp, name) => {
     const mailOptions = {
-        from: `"MenTora Security" <${process.env.EMAIL_USER}>`,
+        from: getFromAddress('MenTora Security'),
         to: email,
         subject: 'Your Password Reset OTP - MenTora',
         html: `
@@ -41,7 +91,7 @@ exports.sendOTPEmail = async (email, otp, name) => {
         `,
     };
 
-    return transporter.sendMail(mailOptions);
+    return sendMail(mailOptions);
 };
 
 /**
@@ -50,7 +100,7 @@ exports.sendOTPEmail = async (email, otp, name) => {
 exports.sendLoginAlert = async (email, name, device = 'Unknown Device') => {
     const timestamp = new Date().toLocaleString();
     const mailOptions = {
-        from: `"MenTora Security" <${process.env.EMAIL_USER}>`,
+        from: getFromAddress('MenTora Security'),
         to: email,
         subject: 'Security Alert: New Login to MenTora',
         html: `
@@ -68,7 +118,7 @@ exports.sendLoginAlert = async (email, name, device = 'Unknown Device') => {
         `,
     };
 
-    return transporter.sendMail(mailOptions);
+    return sendMail(mailOptions);
 };
 
 /**
@@ -76,7 +126,7 @@ exports.sendLoginAlert = async (email, name, device = 'Unknown Device') => {
  */
 exports.sendWelcomeEmail = async (email, name, role) => {
     const mailOptions = {
-        from: `"MenTora" <${process.env.EMAIL_USER}>`,
+        from: getFromAddress('MenTora'),
         to: email,
         subject: 'Welcome to MenTora!',
         html: `
@@ -92,14 +142,15 @@ exports.sendWelcomeEmail = async (email, name, role) => {
         `,
     };
 
-    return transporter.sendMail(mailOptions);
+    return sendMail(mailOptions);
 };
+
 /**
  * Sends a 6-digit OTP for account registration.
  */
 exports.sendVerificationOTPEmail = async (email, otp) => {
     const mailOptions = {
-        from: `"MenTora" <${process.env.EMAIL_USER}>`,
+        from: getFromAddress('MenTora'),
         to: email,
         subject: 'Verify Your Email - MenTora',
         html: `
@@ -117,5 +168,7 @@ exports.sendVerificationOTPEmail = async (email, otp) => {
         `,
     };
 
-    return transporter.sendMail(mailOptions);
+    return sendMail(mailOptions);
 };
+
+exports.isEmailConfigured = isEmailConfigured;

@@ -270,6 +270,12 @@ exports.sendRegistrationOTP = async (req, res) => {
         if (!email) return res.status(400).json({ message: 'Email is required' });
         const normalizedEmail = email.toLowerCase().trim();
 
+        if (!emailService.isEmailConfigured()) {
+            return res.status(503).json({
+                message: 'Email service is not configured on the server. Please contact support.'
+            });
+        }
+
         // 1. Check if user already exists
         let user = await Student.findOne({ where: { email: normalizedEmail } });
         if (!user) {
@@ -317,6 +323,12 @@ exports.forgotPassword = async (req, res) => {
         const { email } = req.body;
         if (!email) return res.status(400).json({ message: 'Email is required' });
         const normalizedEmail = email.toLowerCase().trim();
+
+        if (!emailService.isEmailConfigured()) {
+            return res.status(503).json({
+                message: 'Email service is not configured on the server. Please contact support.'
+            });
+        }
 
         // 1. Verify User Exists
         let user = await Student.findOne({ where: { email: normalizedEmail } });

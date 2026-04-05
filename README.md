@@ -51,7 +51,7 @@ Update the API base URL in the Flutter app when needed so it points to your runn
 For release builds, pass the backend URL explicitly:
 
 ```bash
-flutter build apk --dart-define=API_URL=https://mentor-mantee.onrender.com
+flutter build apk --dart-define=API_URL=https://mentora-backend.onrender.com
 ```
 
 This project reads `API_URL` via `String.fromEnvironment`, so `frontend/.env` is not enough by itself for production builds.

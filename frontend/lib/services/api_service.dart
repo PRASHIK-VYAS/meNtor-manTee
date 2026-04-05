@@ -25,7 +25,8 @@ class ApiService {
     }
 
     // Priority 3: Use production fallback
-    const String productionUrl = 'https://mentor-mantee.onrender.com';
+    // Keep this in sync with the Render service name in render.yaml.
+    const String productionUrl = 'https://mentora-backend.onrender.com';
     print('[DEBUG URL] Using production fallback: "$productionUrl"');
     return productionUrl;
   }
