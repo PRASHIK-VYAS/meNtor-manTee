@@ -24,7 +24,7 @@ router.get('/:id/documents', mentorController.getMentorDocuments);
 router.patch('/students/:studentId', mentorController.updateStudentProfile);
 router.get('/:id', mentorController.getById);
 router.put('/:id', mentorController.update);
-router.patch('/activities/:activityId/approve', mentorController.approveActivity);
+router.patch('/review/:type/:id', mentorController.reviewItem);
 router.delete('/:id', mentorController.remove);
 
 

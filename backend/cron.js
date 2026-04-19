@@ -15,4 +15,6 @@ https.get(RENDER_URL, (res) => {
   }
 }).on('error', (err) => {
   console.error(`❌ Error pinging backend: ${err.message}`);
+  
 });
+

@@ -9,7 +9,8 @@ class InternshipModel {
   final String? certificateUrl;
   final DateTime startDate;
   final DateTime endDate;
-  final bool isVerified;
+  final String status; // "Pending", "Approved", "Rejected"
+  final String? rejectionReason;
 
   InternshipModel({
     required this.id,
@@ -22,7 +23,8 @@ class InternshipModel {
     this.certificateUrl,
     required this.startDate,
     required this.endDate,
-    this.isVerified = false,
+    this.status = 'Pending',
+    this.rejectionReason,
   });
 
   Map<String, dynamic> toMap() {
@@ -36,7 +38,8 @@ class InternshipModel {
       'certificate_url': certificateUrl,
       'start_date': startDate.toIso8601String(),
       'end_date': endDate.toIso8601String(),
-      'is_verified': isVerified,
+      'status': status,
+      'rejection_reason': rejectionReason,
     };
   }
 
@@ -59,7 +62,8 @@ class InternshipModel {
               map['endDate'] ??
               DateTime.now().toIso8601String())
           .toString()),
-      isVerified: (map['is_verified'] ?? map['isVerified'] as bool?) ?? false,
+      status: (map['status'] ?? 'Pending').toString(),
+      rejectionReason: (map['rejection_reason'] ?? map['rejectionReason'])?.toString(),
     );
   }
 }

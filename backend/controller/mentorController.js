@@ -143,7 +143,7 @@ module.exports = {
   getPendingActivities: async (req, res) => {
     try {
       const { id } = req.params;
-      const { Activity, Student } = require('../model');
+      const { Activity, Internship, Certification, Student } = require('../model');
       
       const students = await Student.findAll({ where: { mentor_id: id } });
       const studentIds = students.map(s => s.id);
@@ -152,40 +152,55 @@ module.exports = {
         return res.status(200).json([]);
       }
       
+      // Fetch all pending types
       const activities = await Activity.findAll({
-        where: {
-          student_id: studentIds,
-          is_verified: false
-        },
-        include: [{
-          model: Student,
-          attributes: ['id', 'full_name', 'student_id']
-        }],
-        order: [['created_at', 'DESC']]
+        where: { student_id: studentIds, status: 'Pending' },
+        include: [{ model: Student, attributes: ['id', 'full_name', 'student_id'] }]
+      });
+
+      const internships = await Internship.findAll({
+        where: { student_id: studentIds, status: 'Pending' },
+        include: [{ model: Student, attributes: ['id', 'full_name', 'student_id'] }]
+      });
+
+      const certifications = await Certification.findAll({
+        where: { student_id: studentIds, status: 'Pending' },
+        include: [{ model: Student, attributes: ['id', 'full_name', 'student_id'] }]
       });
       
-      return res.status(200).json(activities);
+      // Combine with type metadata
+      const results = [
+        ...activities.map(a => ({ ...a.get(), reviewType: 'Activity' })),
+        ...internships.map(i => ({ ...i.get(), reviewType: 'Internship' })),
+        ...certifications.map(c => ({ ...c.get(), reviewType: 'Certification' }))
+      ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      
+      return res.status(200).json(results);
     } catch (error) {
       console.error('Error fetching pending activities:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   },
   
-  approveActivity: async (req, res) => {
+  reviewItem: async (req, res) => {
     try {
-      const { activityId } = req.params;
-      const { is_verified } = req.body;
-      const { Activity } = require('../model');
+      const { type, id } = req.params;
+      const { status, rejection_reason } = req.body;
+      const { Activity, Internship, Certification } = require('../model');
       
-      const activity = await Activity.findByPk(activityId);
-      if (!activity) {
-        return res.status(404).json({ message: 'Activity not found' });
-      }
+      let Model;
+      if (type === 'Activity') Model = Activity;
+      else if (type === 'Internship') Model = Internship;
+      else if (type === 'Certification') Model = Certification;
+      else return res.status(400).json({ message: 'Invalid type' });
       
-      await activity.update({ is_verified });
-      return res.status(200).json(activity);
+      const item = await Model.findByPk(id);
+      if (!item) return res.status(404).json({ message: 'Item not found' });
+      
+      await item.update({ status, rejection_reason });
+      return res.status(200).json(item);
     } catch (error) {
-      console.error('Approve Activity Error:', error);
+      console.error('Review Item Error:', error);
       return res.status(500).json({ message: 'Internal server error' });
     }
   }

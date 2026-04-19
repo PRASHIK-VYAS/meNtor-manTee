@@ -39,10 +39,14 @@ const Certification = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true
     },
-    is_verified: {
-      type: DataTypes.BOOLEAN,
-      allowNull: true,
-      defaultValue: false
+    status: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'Pending' // Pending, Approved, Rejected
+    },
+    rejection_reason: {
+      type: DataTypes.TEXT,
+      allowNull: true
     },
     certificate_url: {
       type: DataTypes.TEXT,

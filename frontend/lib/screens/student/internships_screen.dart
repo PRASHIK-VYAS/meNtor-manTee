@@ -114,29 +114,19 @@ class InternshipsScreen extends StatelessWidget {
                             runSpacing: 4,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: internship.isVerified
-                                      ? Colors.green.withOpacity(0.1)
-                                      : Colors.orange.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  internship.isVerified
-                                      ? 'APPROVED'
-                                      : 'PENDING REVIEW',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.0,
-                                    color: internship.isVerified
-                                        ? Colors.green.shade800
-                                        : Colors.orange.shade800,
+                              _buildStatusBadge(internship.status),
+                              if (internship.rejectionReason != null && internship.status == 'Rejected')
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    'REASON: ${internship.rejectionReason}',
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                              ),
                               if (internship.certificateUrl != null) ...[
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -168,18 +158,28 @@ class InternshipsScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.edit_outlined,
-                            size: 22, color: Colors.black54),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  AddInternshipScreen(internship: internship),
-                            ),
-                          );
-                        },
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined,
+                                size: 20, color: Colors.black54),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      AddInternshipScreen(internship: internship),
+                                ),
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                size: 20, color: Colors.redAccent),
+                            onPressed: () => _confirmDelete(context, internship),
+                          ),
+                        ],
                       ),
                       isThreeLine: true,
                       onTap: () {
@@ -309,6 +309,82 @@ class InternshipsScreen extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('CLOSE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    String text;
+
+    switch (status) {
+      case 'Approved':
+        color = Colors.green.shade800;
+        text = 'APPROVED';
+        break;
+      case 'Rejected':
+        color = Colors.red.shade800;
+        text = 'REJECTED';
+        break;
+      default:
+        color = Colors.orange.shade800;
+        text = 'WAITING FOR APPROVAL';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.0,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, InternshipModel internship) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Internship',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text(
+            'Are you sure you want to delete this internship record?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await Provider.of<StudentProvider>(context, listen: false)
+                    .deleteInternship(internship.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Internship deleted')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('DELETE'),
           ),
         ],
       ),

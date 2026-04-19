@@ -6,7 +6,8 @@ class ActivityModel {
   final String role;
   final DateTime date;
   final String? proofUrl;
-  final bool isVerified;
+  final String status; // "Pending", "Approved", "Rejected"
+  final String? rejectionReason;
 
   ActivityModel({
     required this.id,
@@ -16,7 +17,8 @@ class ActivityModel {
     required this.role,
     required this.date,
     this.proofUrl,
-    this.isVerified = false,
+    this.status = 'Pending',
+    this.rejectionReason,
   });
 
   Map<String, dynamic> toMap() {
@@ -27,7 +29,8 @@ class ActivityModel {
       'role': role,
       'date': date.toIso8601String(),
       'proof_url': proofUrl,
-      'is_verified': isVerified,
+      'status': status,
+      'rejection_reason': rejectionReason,
     };
     if (id.isNotEmpty) {
       map['id'] = id;
@@ -45,7 +48,8 @@ class ActivityModel {
       date: DateTime.parse(
           (map['date'])?.toString() ?? DateTime.now().toIso8601String()),
       proofUrl: map['proof_url']?.toString(),
-      isVerified: map['is_verified'] == 1 || map['is_verified'] == true,
+      status: map['status']?.toString() ?? (map['is_verified'] == true ? 'Approved' : 'Pending'),
+      rejectionReason: map['rejection_reason']?.toString(),
     );
   }
 }

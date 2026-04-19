@@ -209,28 +209,26 @@ class CertificationsScreen extends StatelessWidget {
                   runSpacing: 8,
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: cert.isVerified
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        cert.isVerified ? 'APPROVED' : 'PENDING REVIEW',
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.0,
-                          color: cert.isVerified
-                              ? Colors.green.shade800
-                              : Colors.orange.shade800,
-                        ),
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildStatusBadge(cert.status),
+                        if (cert.rejectionReason != null &&
+                            cert.status == 'Rejected')
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              'REASON: ${cert.rejectionReason}',
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
-                    if (cert.points > 0 && cert.isVerified)
+                    if (cert.points > 0 && cert.status == 'Approved')
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
@@ -278,18 +276,28 @@ class CertificationsScreen extends StatelessWidget {
                 ),
               ],
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.edit_outlined,
-                  size: 22, color: Colors.black54),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        AddCertificationScreen(certification: cert),
-                  ),
-                );
-              },
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined,
+                      size: 20, color: Colors.black54),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            AddCertificationScreen(certification: cert),
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      size: 20, color: Colors.redAccent),
+                  onPressed: () => _confirmDelete(context, cert),
+                ),
+              ],
             ),
             isThreeLine: true,
             onTap: () {
@@ -425,6 +433,82 @@ class CertificationsScreen extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('CLOSE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    String text;
+
+    switch (status) {
+      case 'Approved':
+        color = Colors.green.shade800;
+        text = 'APPROVED';
+        break;
+      case 'Rejected':
+        color = Colors.red.shade800;
+        text = 'REJECTED';
+        break;
+      default:
+        color = Colors.orange.shade800;
+        text = 'WAITING FOR APPROVAL';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.0,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, CertificationModel cert) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Achievement',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text(
+            'Are you sure you want to delete this certification/achievement?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await Provider.of<StudentProvider>(context, listen: false)
+                    .deleteCertification(cert.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Achievement deleted')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('DELETE'),
           ),
         ],
       ),

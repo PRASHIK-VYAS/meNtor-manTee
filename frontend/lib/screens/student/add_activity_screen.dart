@@ -92,8 +92,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         role: _roleController.text.trim(),
         date: _date!,
         level: _level,
-        proofUrl: _selectedFilePath,
-        isVerified: widget.activity?.isVerified ?? false,
+        proofUrl: _selectedFilePath, // This is now the link
       );
 
       await studentProvider.updateActivity(activity);
@@ -103,7 +102,7 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(widget.activity == null
-                  ? 'Activity added successfully!'
+                  ? 'Activity submitted for approval!'
                   : 'Activity updated successfully!')),
         );
       }
@@ -180,36 +179,18 @@ class _AddActivityScreenState extends State<AddActivityScreen> {
               ),
               const SizedBox(height: 24),
 
-              // File Picker
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(8),
+              // Link Input instead of File Picker
+              TextFormField(
+                initialValue: _selectedFilePath,
+                decoration: const InputDecoration(
+                  labelText: 'Google Drive Link',
+                  hintText: 'Paste link to proof (Certificate/Photo)',
+                  prefixIcon: Icon(Icons.link),
+                  border: OutlineInputBorder(),
+                  helperText: 'Make sure the link is accessible by your mentor',
                 ),
-                child: Column(
-                  children: [
-                    Icon(
-                      _selectedFileName != null
-                          ? Icons.check_circle
-                          : Icons.upload_file,
-                      size: 40,
-                      color: _selectedFileName != null
-                          ? Colors.green
-                          : Colors.grey,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _selectedFileName ?? 'Upload Proof (Optional)',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: _pickFile,
-                      child: const Text('Select File'),
-                    ),
-                  ],
-                ),
+                onChanged: (val) => setState(() => _selectedFilePath = val.trim()),
+                validator: (val) => val!.isEmpty ? 'Enter proof link' : null,
               ),
               const SizedBox(height: 32),
 

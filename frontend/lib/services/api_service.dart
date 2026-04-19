@@ -19,7 +19,7 @@ class ApiService {
 
     // Priority 2: Use local fallback for debug mode (Development)
     if (kDebugMode) {
-      const String localUrl = 'http://10.0.2.2:5000';
+      const String localUrl = 'http://192.168.0.101:5000';
       print('[DEBUG URL] Using local development fallback: "$localUrl"');
       return localUrl;
     }
@@ -32,8 +32,6 @@ class ApiService {
   }
 
   final _storage = const FlutterSecureStorage();
-
-  // ... (rest of your methods: _getHeaders, get, post, etc. stay exactly the same)
 
   Future<Map<String, String>> _getHeaders() async {
     final token = await _storage.read(key: 'jwt_token');

@@ -112,29 +112,25 @@ class ActivitiesScreen extends StatelessWidget {
                             runSpacing: 8,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: activity.isVerified
-                                      ? Colors.green.withOpacity(0.1)
-                                      : Colors.orange.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(6),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildStatusBadge(activity.status),
+                                    if (activity.rejectionReason != null &&
+                                        activity.status == 'Rejected')
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8.0),
+                                        child: Text(
+                                          'REASON: ${activity.rejectionReason}',
+                                          style: const TextStyle(
+                                            color: Colors.red,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
-                                child: Text(
-                                  activity.isVerified
-                                      ? 'APPROVED'
-                                      : 'PENDING REVIEW',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: 1.0,
-                                    color: activity.isVerified
-                                        ? Colors.green.shade800
-                                        : Colors.orange.shade800,
-                                  ),
-                                ),
-                              ),
                               if (activity.proofUrl != null)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
@@ -165,22 +161,29 @@ class ActivitiesScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      trailing: !activity.isVerified
-                          ? IconButton(
-                              icon: const Icon(Icons.edit_outlined,
-                                  color: Colors.black54, size: 22),
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        AddActivityScreen(activity: activity),
-                                  ),
-                                );
-                              },
-                            )
-                          : Icon(Icons.verified_outlined,
-                              color: Colors.green.shade700, size: 24),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined,
+                                color: Colors.black54, size: 20),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      AddActivityScreen(activity: activity),
+                                ),
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded,
+                                color: Colors.redAccent, size: 20),
+                            onPressed: () => _confirmDelete(context, activity),
+                          ),
+                        ],
+                      ),
                       isThreeLine: true,
                     ),
                   );
@@ -190,15 +193,80 @@ class ActivitiesScreen extends StatelessWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AddActivityScreen()),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Add Activity'),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    String text;
+
+    switch (status) {
+      case 'Approved':
+        color = Colors.green.shade800;
+        text = 'APPROVED';
+        break;
+      case 'Rejected':
+        color = Colors.red.shade800;
+        text = 'REJECTED';
+        break;
+      default:
+        color = Colors.orange.shade800;
+        text = 'WAITING FOR APPROVAL';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.0,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, ActivityModel activity) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Activity',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to delete this activity?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await Provider.of<StudentProvider>(context, listen: false)
+                    .deleteActivity(activity.id);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Activity deleted')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('DELETE'),
+          ),
+        ],
       ),
     );
   }

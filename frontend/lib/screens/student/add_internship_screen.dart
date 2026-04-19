@@ -74,33 +74,11 @@ class _AddInternshipScreenState extends State<AddInternshipScreen> {
     }
   }
 
-  Future<void> _pickCertificate() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-      );
-
-      if (result != null) {
-        setState(() {
-          // In a real app, you'd upload this to a storage service (S3, Firebase, etc.)
-          // and get a URL. For now, we'll use the local path as a placeholder.
-          _certificateUrl = result.files.single.path;
-        });
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Selected: ${result.files.single.name}')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking file: $e')),
-        );
-      }
-    }
+  // Certificate link input instead of file picker
+  void _updateCertificateUrl(String url) {
+    setState(() {
+      _certificateUrl = url.trim();
+    });
   }
 
   Future<void> _handleSubmit() async {
@@ -122,7 +100,6 @@ class _AddInternshipScreenState extends State<AddInternshipScreen> {
         startDate: _startDate!,
         endDate: _endDate!,
         certificateUrl: _certificateUrl,
-        isVerified: widget.internship?.isVerified ?? false,
       );
 
       await studentProvider.updateInternship(internship);
@@ -269,33 +246,24 @@ class _AddInternshipScreenState extends State<AddInternshipScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Certificate Upload Button
-              OutlinedButton.icon(
-                onPressed: _pickCertificate,
-                icon: Icon(_certificateUrl != null
-                    ? Icons.check_circle
-                    : Icons.upload_file),
-                label: Text(_certificateUrl != null
-                    ? 'Certificate Selected'
-                    : 'Upload Internship Certificate'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  foregroundColor:
-                      _certificateUrl != null ? Colors.green : null,
-                  side: _certificateUrl != null
-                      ? const BorderSide(color: Colors.green)
-                      : null,
+              // Certificate Link Input
+              TextFormField(
+                initialValue: _certificateUrl,
+                decoration: const InputDecoration(
+                  labelText: 'Internship Certificate Link (Google Drive)',
+                  hintText: 'https://drive.google.com/...',
+                  prefixIcon: Icon(Icons.link_rounded),
+                  border: OutlineInputBorder(),
+                  helperText: 'Make sure your mentor has access to this link',
                 ),
+                onChanged: _updateCertificateUrl,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter certificate link';
+                  }
+                  return null;
+                },
               ),
-              if (_certificateUrl != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
-                  child: Text(
-                    'File: ${_certificateUrl!.split('/').last}',
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
 
               const SizedBox(height: 30),
 

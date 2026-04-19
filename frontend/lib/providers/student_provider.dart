@@ -190,12 +190,12 @@ class StudentProvider with ChangeNotifier {
     double cgpaScore = (_currentStudent!.currentCGPA / 10.0) * 50;
 
     // Sum points of verified certifications capped at 10
-    final verifiedCerts = _certifications.where((c) => c.isVerified).toList();
+    final verifiedCerts = _certifications.where((c) => c.status == 'Approved').toList();
     int totalCertPoints =
         verifiedCerts.fold<int>(0, (sum, c) => sum + (c.points));
     int certScore = totalCertPoints > 10 ? 10 : totalCertPoints;
 
-    int internshipScore = (_internships.length * 10).clamp(0, 20);
+    int internshipScore = (_internships.where((i) => i.status == 'Approved').length * 10).clamp(0, 20);
 
     final completedTasksCount =
         _tasks.where((t) => t.status == 'Completed').length;
@@ -494,6 +494,45 @@ class StudentProvider with ChangeNotifier {
     }
   }
 
+  // Delete Internship
+  Future<void> deleteInternship(String id) async {
+    try {
+      await _apiService.delete('/internships/$id');
+      if (_currentStudent != null) {
+        await loadStudentData(_currentStudent!.id);
+      }
+    } catch (e) {
+      print('Error deleting internship: $e');
+      rethrow;
+    }
+  }
+
+  // Delete Certification
+  Future<void> deleteCertification(String id) async {
+    try {
+      await _apiService.delete('/certifications/$id');
+      if (_currentStudent != null) {
+        await loadStudentData(_currentStudent!.id);
+      }
+    } catch (e) {
+      print('Error deleting certification: $e');
+      rethrow;
+    }
+  }
+
+  // Delete Activity
+  Future<void> deleteActivity(String id) async {
+    try {
+      await _apiService.delete('/activities/$id');
+      if (_currentStudent != null) {
+        await loadStudentData(_currentStudent!.id);
+      }
+    } catch (e) {
+      print('Error deleting activity: $e');
+      rethrow;
+    }
+  }
+
   // Update document status
   Future<void> updateDocumentStatus(String docTitle, String status,
       {String? filePath}) async {
@@ -523,15 +562,32 @@ class StudentProvider with ChangeNotifier {
         });
 
         if (status == 'Pending Approval') {
-          await _apiService.post('/documents', {
-            'student_id': _currentStudent!.id,
-            'mentor_id': _currentStudent!.mentorId,
-            'type': 'Document',
-            'title': docTitle,
-            'description': 'Verification required for $docTitle',
-            'file_path': filePath ?? '',
-            'status': 'Pending Approval',
-          });
+          // Check if an existing request for this document title already exists
+          final existingRequest = _documentRequests.isNotEmpty 
+              ? _documentRequests.firstWhere(
+                  (r) => r.title == docTitle && r.status != 'Approved' && r.status != 'Verified',
+                  orElse: () => DocumentRequestModel(id: '', studentId: '', mentorId: '', title: '', description: '', type: '', status: '', createdAt: DateTime.now()))
+              : DocumentRequestModel(id: '', studentId: '', mentorId: '', title: '', description: '', type: '', status: '', createdAt: DateTime.now());
+
+          if (existingRequest.id.isNotEmpty) {
+            // Update existing instead of creating duplicate
+            await _apiService.patch('/documents/${existingRequest.id}', {
+              'file_path': filePath ?? '',
+              'status': 'Pending Approval',
+              'description': 'Updated verification for $docTitle (Retry)',
+            });
+          } else {
+            // Create new record
+            await _apiService.post('/documents', {
+              'student_id': _currentStudent!.id,
+              'mentor_id': _currentStudent!.mentorId,
+              'type': 'Document',
+              'title': docTitle,
+              'description': 'Verification required for $docTitle',
+              'file_path': filePath ?? '',
+              'status': 'Pending Approval',
+            });
+          }
         }
 
         await loadStudentData(_currentStudent!.id);

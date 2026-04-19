@@ -22,32 +22,47 @@ class _StudentDocumentsScreenState extends State<StudentDocumentsScreen> {
     'Internship Certificate',
   ];
 
-  Future<void> _uploadDocument(BuildContext context, String title) async {
+  Future<void> _provideLink(BuildContext context, String title) async {
     final provider = Provider.of<StudentProvider>(context, listen: false);
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-      );
+    final controller = TextEditingController();
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Provide link for $title'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'https://drive.google.com/...',
+            labelText: 'Google Drive Link',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('SUBMIT'),
+          ),
+        ],
+      ),
+    );
 
-      if (result != null) {
-        String? path = result.files.single.path;
-        // Simulate upload to provider with path
-        await provider.updateDocumentStatus(title, 'Pending Approval',
-            filePath: path);
+    if (result != null && result.isNotEmpty) {
+      // Pass the link as the filePath
+      await provider.updateDocumentStatus(title, 'Pending Approval',
+          filePath: result);
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content:
-                    Text('${result.files.single.name} uploaded successfully!')),
-          );
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Document link submitted successfully!')),
+        );
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking file: $e')),
-      );
     }
   }
 
@@ -110,436 +125,414 @@ class _StudentDocumentsScreenState extends State<StudentDocumentsScreen> {
     }
   }
 
-  Future<void> _uploadDocumentForRequest(
+  Future<void> _provideLinkForRequest(
       BuildContext context, dynamic request) async {
     final provider = Provider.of<StudentProvider>(context, listen: false);
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-      );
+    final controller = TextEditingController();
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Provide link for ${request.title}'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'https://drive.google.com/...',
+            labelText: 'Google Drive Link',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text.trim()),
+            child: const Text('SUBMIT'),
+          ),
+        ],
+      ),
+    );
 
-      if (result != null) {
-        String? path = result.files.single.path;
-        await provider.uploadDocumentForRequest(request.id, path ?? '');
+    if (result != null && result.isNotEmpty) {
+      await provider.uploadDocumentForRequest(request.id, result);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Document link submitted successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showAddCustomDocDialog(BuildContext context) async {
+    final titleController = TextEditingController();
+    final linkController = TextEditingController();
+
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ADD EXTRA DOCUMENT',
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                labelText: 'Document Title',
+                hintText: 'e.g. Letter of Recommendation',
+                border: OutlineInputBorder(),
+              ),
+              textCapitalization: TextCapitalization.words,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: linkController,
+              decoration: const InputDecoration(
+                labelText: 'Google Drive Link',
+                hintText: 'https://drive.google.com/...',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton(
+            onPressed: () {
+              if (titleController.text.trim().isEmpty ||
+                  linkController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill all fields')),
+                );
+                return;
+              }
+              Navigator.pop(context, {
+                'title': titleController.text.trim(),
+                'link': linkController.text.trim(),
+              });
+            },
+            child: const Text('SUBMIT'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      final provider = Provider.of<StudentProvider>(context, listen: false);
+      try {
+        await provider.updateDocumentStatus(
+            result['title']!, 'Pending Approval',
+            filePath: result['link']);
 
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content:
-                  Text('${result.files.single.name} uploaded successfully!'),
+              content: Text('${result['title']} submitted successfully!'),
               backgroundColor: Colors.green,
             ),
           );
         }
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error uploading file: $e')),
-        );
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('MY DOCUMENTS',
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+        centerTitle: true,
         backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Custom Tab Bar
-              Container(
-                color: Colors.white,
-                child: const TabBar(
-                  indicatorColor: Colors.black,
-                  labelColor: Colors.black,
-                  unselectedLabelColor: Colors.black45,
-                  indicatorWeight: 3,
-                  labelStyle: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                    letterSpacing: 1.2,
-                  ),
-                  tabs: [
-                    Tab(text: 'MY DOCUMENTS'),
-                    Tab(text: 'MENTOR REQUESTS'),
-                  ],
-                ),
-              ),
-              const Divider(height: 1, color: Colors.black12),
-              Expanded(
-                child: Consumer<StudentProvider>(
-                  builder: (context, provider, child) {
-                    final student = provider.currentStudent;
-                    if (student == null) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    return TabBarView(
-                      children: [
-                        _buildStandardDocumentsTab(context, provider),
-                        _buildMentorRequestsTab(context, provider),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+        elevation: 0,
+        foregroundColor: Colors.black,
       ),
-    );
-  }
+      body: Consumer<StudentProvider>(
+        builder: (context, provider, child) {
+          final student = provider.currentStudent;
+          if (student == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-  Widget _buildStandardDocumentsTab(
-      BuildContext context, StudentProvider provider) {
-    final student = provider.currentStudent!;
-    final docStatuses = student.documentStatuses;
-    double completion = student.documentCompletion;
+          final docStatuses = student.documentStatuses;
+          double completion = student.documentCompletion;
+          final requests = provider.documentRequests
+              .where((req) => req.status == 'Pending' || req.status == 'Rejected')
+              .toList();
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        children: [
-          // Completion Bar
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F7),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.black.withOpacity(0.05)),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          return ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            children: [
+              // Completion Bar
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F5F7),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.black.withOpacity(0.05)),
+                ),
+                child: Column(
                   children: [
-                    const Text(
-                      'DOCUMENT PROFILE',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 13,
-                        letterSpacing: 1.5,
-                        color: Colors.black54,
-                      ),
-                    ),
-                    Text(
-                      '${completion.toInt()}% COMPLETE',
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 13,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                LinearProgressIndicator(
-                  value: completion / 100,
-                  backgroundColor: Colors.white,
-                  color: Colors.black,
-                  minHeight: 8,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                if (completion <= 50) ...[
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Icon(Icons.warning_amber_rounded,
-                            color: Colors.orange.shade800, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Please upload your core documents to avoid verification delays.',
-                            style: TextStyle(
-                              color: Colors.orange.shade900,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              height: 1.4,
-                            ),
+                        const Text(
+                          'DOCUMENT PROFILE',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            letterSpacing: 1.5,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        Text(
+                          '${completion.toInt()}% COMPLETE',
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            letterSpacing: 1.0,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: ListView.separated(
-              itemCount: _requiredDocs.length,
-              separatorBuilder: (ctx, i) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
+                    const SizedBox(height: 16),
+                    LinearProgressIndicator(
+                      value: completion / 100,
+                      backgroundColor: Colors.white,
+                      color: Colors.black,
+                      minHeight: 10,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              const Text(
+                'CORE DOCUMENTS',
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 12,
+                  letterSpacing: 1.5,
+                  color: Colors.black38,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...List.generate(_requiredDocs.length, (index) {
                 final title = _requiredDocs[index];
                 final dbStatus = docStatuses[title] ?? 'Missing';
                 final status = dbStatus == 'Pending' ? 'Missing' : dbStatus;
-                // Only consider it 'uploaded' if it's not the initial 'Pending' or 'Missing' state
                 final isUploaded = status != 'Missing';
 
-                return Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.black.withOpacity(0.05)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: ListTile(
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    leading: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isUploaded
-                            ? Colors.green.withOpacity(0.1)
-                            : const Color(0xFFF5F5F7),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        isUploaded
-                            ? Icons.verified_outlined
-                            : Icons.upload_file_outlined,
-                        color: isUploaded
-                            ? Colors.green.shade700
-                            : Colors.black45,
-                      ),
-                    ),
-                    title: Text(
-                      title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                        fontSize: 15,
-                      ),
-                    ),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: status == 'Approved'
-                                  ? Colors.green.withOpacity(0.1)
-                                  : status == 'Missing'
-                                      ? Colors.red.withOpacity(0.1)
-                                      : Colors.orange.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              status.toUpperCase(),
-                              style: TextStyle(
-                                color: status == 'Approved'
-                                    ? Colors.green.shade800
-                                    : status == 'Missing'
-                                        ? Colors.red.shade800
-                                        : Colors.orange.shade800,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 9,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    trailing: isUploaded
-                        ? IconButton(
-                            icon: const Icon(Icons.remove_red_eye_outlined,
-                                color: Colors.black87),
-                            onPressed: () => _viewDocument(context, title,
-                                student.documentFilePaths[title]),
-                          )
-                        : TextButton(
-                            onPressed: () => _uploadDocument(context, title),
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.black,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                            ),
-                            child: const Text(
-                              'UPLOAD',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                fontSize: 11,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                          ),
-                  ),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildDocCard(context, title, status, isUploaded,
+                      student.documentFilePaths[title]),
                 );
-              },
-            ),
+              }),
+
+              if (requests.isNotEmpty) ...[
+                const SizedBox(height: 32),
+                const Text(
+                  'MENTOR REQUESTS',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 12,
+                    letterSpacing: 1.5,
+                    color: Colors.black38,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...requests.map((req) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildRequestCard(context, req),
+                    )),
+              ],
+              const SizedBox(height: 100), // Space for FAB
+            ],
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showAddCustomDocDialog(context),
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        elevation: 10,
+        icon: const Icon(Icons.add_rounded),
+        label: const Text(
+          'ADD DOCUMENT',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 11,
+            letterSpacing: 1.2,
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildMentorRequestsTab(
-      BuildContext context, StudentProvider provider) {
-    final requests = provider.documentRequests
-        .where((req) => req.status == 'Pending')
-        .toList();
-
-    if (requests.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.assignment_turned_in_outlined,
-                size: 64, color: Colors.black12),
-            const SizedBox(height: 16),
-            const Text(
-              'NO PENDING REQUESTS',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 14,
-                letterSpacing: 1.5,
-                color: Colors.black26,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Your mentor hasn\'t requested any\ncustom documents yet.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.black38,
-                fontSize: 13,
-                height: 1.5,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: requests.length,
-      separatorBuilder: (ctx, i) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final request = requests[index];
-        final isPending = request.status == 'Pending';
-
-        return Container(
+  Widget _buildDocCard(BuildContext context, String title, String status,
+      bool isUploaded, String? path) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.black.withOpacity(0.05)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        leading: Container(
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.black.withOpacity(0.05)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            color: isUploaded
+                ? Colors.green.withOpacity(0.08)
+                : const Color(0xFFF5F5F7),
+            borderRadius: BorderRadius.circular(15),
           ),
-          child: ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            leading: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isPending
-                    ? Colors.orange.withOpacity(0.1)
-                    : Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                request.type == 'Certification'
-                    ? Icons.verified_outlined
-                    : Icons.description_outlined,
-                color: isPending ? Colors.orange.shade700 : Colors.green.shade700,
-              ),
+          child: Icon(
+            isUploaded ? Icons.link_rounded : Icons.add_link_outlined,
+            color: isUploaded ? Colors.green.shade700 : Colors.black38,
+          ),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(
+              fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: -0.2),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: _getStatusColor(status).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
             ),
-            title: Text(
-              request.title,
-              style: const TextStyle(
+            child: Text(
+              status.toUpperCase(),
+              style: TextStyle(
+                color: _getStatusColor(status),
                 fontWeight: FontWeight.w900,
-                fontSize: 16,
-                letterSpacing: -0.5,
+                fontSize: 9,
+                letterSpacing: 1.2,
               ),
             ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (request.description.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    request.description,
-                    style: const TextStyle(color: Colors.black54, fontSize: 13),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isPending
-                        ? Colors.orange.withOpacity(0.1)
-                        : Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    request.status.toUpperCase(),
-                    style: TextStyle(
-                      color: isPending
-                          ? Colors.orange.shade800
-                          : Colors.green.shade800,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 9,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            trailing: isPending
-                ? TextButton(
-                    onPressed: () => _uploadDocumentForRequest(context, request),
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    ),
-                    child: const Text('UPLOAD',
-                        style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 11,
-                            letterSpacing: 1.0)),
-                  )
-                : Icon(Icons.check_circle, color: Colors.green.shade700),
-            isThreeLine: request.description.isNotEmpty,
           ),
-        );
-      },
+        ),
+        trailing: isUploaded
+            ? IconButton(
+                icon: const Icon(Icons.remove_red_eye_rounded,
+                    color: Colors.black87),
+                onPressed: () => _viewDocument(context, title, path),
+              )
+            : TextButton(
+                onPressed: () => _provideLink(context, title),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+                child: const Text('ADD LINK',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10)),
+              ),
+      ),
     );
   }
+
+  Widget _buildRequestCard(BuildContext context, dynamic request) {
+    final isRejected = request.status == 'Rejected';
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: isRejected
+                ? Colors.red.withOpacity(0.2)
+                : Colors.black.withOpacity(0.05)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        leading: Icon(Icons.assignment_late_rounded,
+            color: isRejected ? Colors.red : Colors.orange),
+        title: Text(
+          request.title,
+          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (request.description.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(request.description,
+                  style: const TextStyle(fontSize: 12, color: Colors.black54)),
+            ],
+            if (isRejected && request.rejectionReason != null) ...[
+              const SizedBox(height: 8),
+              Text('REASON: ${request.rejectionReason}',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold)),
+            ],
+          ],
+        ),
+        trailing: FilledButton(
+          onPressed: () => _provideLinkForRequest(context, request),
+          style: FilledButton.styleFrom(
+            backgroundColor: isRejected ? Colors.red : Colors.black,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: Text(isRejected ? 'RE-SUBMIT' : 'UPLOAD',
+              style:
+                  const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'Approved':
+      case 'Verified':
+        return Colors.green.shade700;
+      case 'Missing':
+        return Colors.red.shade700;
+      case 'Rejected':
+        return Colors.red.shade900;
+      default:
+        return Colors.orange.shade800;
+    }
+  }
+
 }

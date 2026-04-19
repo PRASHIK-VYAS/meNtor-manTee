@@ -9,7 +9,8 @@ class CertificationModel {
   final String type; // "Technical", "Cultural", etc.
   final String level; // "College", "State", "National", "International"
   final String? certificateUrl;
-  final bool isVerified;
+  final String status; // "Pending", "Approved", "Rejected"
+  final String? rejectionReason;
 
   CertificationModel({
     required this.id,
@@ -22,7 +23,8 @@ class CertificationModel {
     required this.type,
     required this.level,
     this.certificateUrl,
-    this.isVerified = false,
+    this.status = 'Pending',
+    this.rejectionReason,
   });
 
   Map<String, dynamic> toMap() {
@@ -36,7 +38,8 @@ class CertificationModel {
       'type': type,
       'level': level,
       'certificate_url': certificateUrl,
-      'is_verified': isVerified,
+      'status': status,
+      'rejection_reason': rejectionReason,
     };
   }
 
@@ -54,7 +57,8 @@ class CertificationModel {
       level: (map['level'] ?? '').toString(),
       certificateUrl:
           (map['certificate_url'] ?? map['certificateUrl'])?.toString(),
-      isVerified: (map['is_verified'] ?? map['isVerified'] as bool?) ?? false,
+      status: (map['status'] ?? 'Pending').toString(),
+      rejectionReason: (map['rejection_reason'] ?? map['rejectionReason'])?.toString(),
     );
   }
 }

@@ -34,7 +34,7 @@ class _MentorMainScreenState extends State<MentorMainScreen> {
 
   final List<Widget> _screens = [
     const MentorDashboardScreen(),
-    const StudentListScreen(),
+    const StudentListScreen(showAppBar: false),
     const MentorLeaderboardScreen(),
     const BroadcastScreen(),
     const MeetingManagementScreen(),
@@ -45,15 +45,15 @@ class _MentorMainScreenState extends State<MentorMainScreen> {
   ];
 
   final List<String> _titles = [
-    'Dashboard',
-    'My Students',
-    'Leaderboard',
-    'Broadcasts',
-    'Meetings',
-    'Assign Tasks',
-    'Doc Approvals',
-    'Activity Approvals',
-    'Academic Records',
+    'DASHBOARD',
+    'MY STUDENTS',
+    'LEADERBOARD',
+    'BROADCASTS',
+    'MEETINGS',
+    'ASSIGN TASKS',
+    'DOC APPROVALS',
+    'ACTIVITY APPROVALS',
+    'ACADEMIC RECORDS',
   ];
 
   @override
@@ -124,7 +124,7 @@ class _MentorMainScreenState extends State<MentorMainScreen> {
                       selectedIcon: Icons.dashboard),
                   _buildDrawerItem(
                       icon: Icons.groups_outlined,
-                      title: 'My Mentees',
+                      title: 'My Students',
                       index: 1,
                       selectedIcon: Icons.people),
                   _buildDrawerItem(

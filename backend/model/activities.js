@@ -41,10 +41,15 @@ const Activity = sequelize.define('Activity', {
     allowNull: true
   },
 
-  is_verified: {
-    type: DataTypes.BOOLEAN,           // boolean
-    allowNull: true,
-    defaultValue: false
+  status: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'Pending' // Pending, Approved, Rejected
+  },
+
+  rejection_reason: {
+    type: DataTypes.TEXT,
+    allowNull: true
   }
 
 }, {

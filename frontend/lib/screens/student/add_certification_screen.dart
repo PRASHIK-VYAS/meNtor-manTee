@@ -72,31 +72,13 @@ class _AddCertificationScreenState extends State<AddCertificationScreen> {
     }
   }
 
-  Future<void> _pickFile() async {
-    try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-      );
-
-      if (result != null) {
-        setState(() {
-          _selectedFilePath = result.files.single.path;
-          _selectedFileName = result.files.single.name;
-        });
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error picking file: $e')),
-      );
-    }
-  }
+  // No longer using FilePicker
 
   Future<void> _handleSubmit() async {
     if (_formKey.currentState!.validate() && _date != null) {
-      if (_selectedFilePath == null) {
+      if (_selectedFilePath == null || _selectedFilePath!.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please upload a certificate file')),
+          const SnackBar(content: Text('Please enter a certificate link')),
         );
         return;
       }
@@ -116,7 +98,6 @@ class _AddCertificationScreenState extends State<AddCertificationScreen> {
         type: _type,
         level: _level,
         certificateUrl: _selectedFilePath,
-        isVerified: widget.certification?.isVerified ?? false,
       );
 
       await studentProvider.updateCertification(certification);
@@ -262,33 +243,22 @@ class _AddCertificationScreenState extends State<AddCertificationScreen> {
               ),
               const SizedBox(height: 30),
 
-              // File Picker UI
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
+              // Certificate Link Input instead of File Picker
+              TextFormField(
+                initialValue: _selectedFilePath,
+                decoration: const InputDecoration(
+                  labelText: 'Certificate Link (Google Drive)',
+                  hintText: 'https://drive.google.com/...',
+                  prefixIcon: Icon(Icons.link_outlined),
+                  border: OutlineInputBorder(),
+                  helperText: 'Make sure your mentor has access to this link',
                 ),
-                child: Column(
-                  children: [
-                    Icon(
-                        _selectedFileName != null
-                            ? Icons.check_circle
-                            : Icons.cloud_upload_outlined,
-                        size: 48,
-                        color: _selectedFileName != null
-                            ? Colors.green
-                            : Colors.indigo),
-                    const SizedBox(height: 8),
-                    Text(_selectedFileName ?? 'Upload Certificate (PDF/Image)'),
-                    const SizedBox(height: 8),
-                    OutlinedButton(
-                      onPressed: _pickFile,
-                      child: const Text('Choose File'),
-                    ),
-                  ],
-                ),
+                onChanged: (val) {
+                  setState(() {
+                    _selectedFilePath = val.trim();
+                  });
+                },
+                validator: (val) => val!.isEmpty ? 'Enter certificate link' : null,
               ),
               const SizedBox(height: 30),
 

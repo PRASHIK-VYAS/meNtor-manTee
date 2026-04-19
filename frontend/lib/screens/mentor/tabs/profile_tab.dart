@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../providers/mentor_provider.dart';
+import '../doc_approval_screen.dart';
 
 class ProfileTab extends StatelessWidget {
   final String studentId;
@@ -28,12 +29,14 @@ class ProfileTab extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor:
-                        Theme.of(context).colorScheme.primaryContainer,
-                    child: Icon(
-                      Icons.person,
-                      size: 50,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    backgroundColor: Colors.black,
+                    child: Text(
+                      student.fullName.substring(0, 1).toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -56,7 +59,7 @@ class ProfileTab extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Editable fields
+          // Read-only fields
           Card(
             child: Column(
               children: [
@@ -75,12 +78,6 @@ class ProfileTab extends StatelessWidget {
                   leading: const Icon(Icons.business_outlined),
                   title: const Text('Department'),
                   subtitle: Text(student.department),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () {
-                      // Edit department
-                    },
-                  ),
                 ),
                 ListTile(
                   leading: const Icon(Icons.menu_book_outlined),
@@ -96,52 +93,57 @@ class ProfileTab extends StatelessWidget {
                   leading: const Icon(Icons.school_outlined),
                   title: const Text('Admission Type'),
                   subtitle: Text(student.admissionType),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () {
-                      // Edit admission type
-                    },
-                  ),
                 ),
                 ListTile(
                   leading: const Icon(Icons.calendar_today_outlined),
                   title: const Text('Date of Birth'),
                   subtitle: Text(
                       DateFormat('yyyy-MM-dd').format(student.dateOfBirth)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () {
-                      // Edit date of birth
-                    },
-                  ),
                 ),
                 ListTile(
                   leading: const Icon(Icons.event_outlined),
                   title: const Text('Date of Joining'),
                   subtitle: Text(
                       DateFormat('yyyy-MM-dd').format(student.dateOfJoining)),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () {
-                      // Edit date of joining
-                    },
-                  ),
                 ),
                 if (student.groupLeaderName != null)
                   ListTile(
                     leading: const Icon(Icons.group_outlined),
                     title: const Text('Group Leader'),
                     subtitle: Text(student.groupLeaderName!),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.edit_outlined),
-                      onPressed: () {
-                        // Edit group leader
-                      },
-                    ),
                   ),
               ],
             ),
           ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => DocApprovalScreen(studentId: student.id),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.description_rounded),
+              label: const Text(
+                'VIEW SUBMITTED DOCUMENTS',
+                style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 40),
         ],
       ),
     );

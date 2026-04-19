@@ -319,22 +319,27 @@ class MentorProvider with ChangeNotifier {
     }
   }
 
-  // Approve or Reject Activity
-  Future<void> reviewActivity(String activityId, bool isVerified) async {
+  // Approve or Reject Item (Activity, Internship, Certification)
+  Future<void> reviewItem({
+    required String type,
+    required String id,
+    required String status,
+    String? rejectionReason,
+  }) async {
     try {
       if (_currentMentor == null) return;
-      await _apiService.patch('/mentors/activities/$activityId/approve', {
-        'is_verified': isVerified,
+      await _apiService.patch('/mentors/review/$type/$id', {
+        'status': status,
+        'rejection_reason': rejectionReason,
       });
-      // Optionally reload the specific student data or all mentor data
-      // For now, reload the selected student if we are viewing them
+
+      // Reload data to reflect changes
       if (_selectedStudent != null) {
-        // Activities are currently not loaded in selectStudent, but if they were we'd reload here.
-        // Let's reload all data just in case or we rely on the specific screen refreshing.
-        notifyListeners();
+        await selectStudent(_selectedStudent!.id);
       }
+      notifyListeners();
     } catch (e) {
-      print('Error reviewing activity: $e');
+      print('Error reviewing item: $e');
       rethrow;
     }
   }
@@ -509,7 +514,7 @@ class MentorProvider with ChangeNotifier {
     }
   }
 
-  // Helper for batch stats (Frontend calculation for now, or fetch from backend analytics endpoint)
+  // Helper for batch stats (Calculated dynamically from loaded students)
   Map<String, String> getBatchStats() {
     if (_assignedStudents.isEmpty) {
       return {
@@ -523,19 +528,37 @@ class MentorProvider with ChangeNotifier {
       };
     }
 
+    int totalStudents = _assignedStudents.length;
+    
+    // 1. Attention/Pending/LowDoc counts (already using real filtered lists)
     int attentionCount = getFilteredStudents('attention').length;
     int pendingDocs = getFilteredStudents('pending').length;
     int lowDocAlerts = getFilteredStudents('low_docs').length;
+
+    // 2. Average CGPA / Pass Rate (e.g. CGPA > 5.0)
+    double totalCGPA = _assignedStudents.fold(0.0, (sum, s) => sum + s.currentCGPA);
+    double avgCGPA = totalCGPA / totalStudents;
+    int passingStudents = _assignedStudents.where((s) => s.currentCGPA >= 5.0).length;
+    double passRate = (passingStudents / totalStudents) * 100;
+
+    // 3. Task Completion Rate
+    int totalPlannedTasks = _assignedStudents.fold(0, (sum, s) => sum + s.pendingTasks); 
+    // This is just a proxy since we don't have total_ever_assigned in the summary model
+    // For a better stat, we'd use the average credit score
+    double avgCreditScore = _assignedStudents.fold(0.0, (sum, s) => sum + s.creditScore) / totalStudents;
+
+    // 4. Certifications
+    int totalCerts = _assignedStudents.fold(0, (sum, s) => sum + s.totalInternships); 
 
     // Apply session dismissals
     if (_dismissedNotifications.contains('attention')) attentionCount = 0;
     if (_dismissedNotifications.contains('pending_docs')) pendingDocs = 0;
 
     return {
-      'totalCount': _assignedStudents.length.toString(),
-      'passRate': '85%',
-      'tasksDone': '70%',
-      'avgCerts': '12',
+      'totalCount': totalStudents.toString(),
+      'passRate': '${passRate.toInt()}%',
+      'tasksDone': '${avgCreditScore.toInt()}%', // Using Credit Score as a performance proxy
+      'avgCerts': totalCerts.toString(),
       'attentionCount': attentionCount.toString(),
       'pendingDocs': pendingDocs.toString(),
       'lowDocAlerts': lowDocAlerts.toString(),

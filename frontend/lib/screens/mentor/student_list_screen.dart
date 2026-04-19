@@ -8,7 +8,8 @@ import 'student_ai_insight_screen.dart'; // New
 
 class StudentListScreen extends StatefulWidget {
   final String? filter;
-  const StudentListScreen({super.key, this.filter});
+  final bool showAppBar;
+  const StudentListScreen({super.key, this.filter, this.showAppBar = true});
 
   @override
   State<StudentListScreen> createState() => _StudentListScreenState();
@@ -37,15 +38,15 @@ class _StudentListScreenState extends State<StudentListScreen> {
   String _getTitle() {
     switch (widget.filter) {
       case 'attention':
-        return 'Attention Needed';
+        return 'ATTENTION NEEDED';
       case 'pending':
-        return 'Pending Review';
+        return 'PENDING REVIEW';
       case 'low_docs':
-        return 'Low Doc Alerts';
+        return 'LOW DOC ALERTS';
       case 'all':
-        return 'All Students';
+        return 'ALL STUDENTS';
       default:
-        return 'Students';
+        return 'MY STUDENTS';
     }
   }
 
@@ -53,7 +54,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
+      appBar: widget.showAppBar ? AppBar(
         title: Text(
           _getTitle(),
           style: const TextStyle(
@@ -66,7 +67,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         surfaceTintColor: Colors.transparent,
-      ),
+      ) : null,
       body: FutureBuilder(
         future: _loadDataFuture,
         builder: (context, snapshot) {
@@ -92,33 +93,40 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 children: [
                   // Search Bar
                   Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search students...',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _searchQuery.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  setState(() {
-                                    _searchQuery = '';
-                                    _searchController.clear();
-                                  });
-                                },
-                              )
-                            : null,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    padding: EdgeInsets.fromLTRB(16, widget.showAppBar ? 8 : 24, 16, 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF5F5F7),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.black.withOpacity(0.05)),
                       ),
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value;
-                        });
-                      },
+                      child: TextField(
+                        controller: _searchController,
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Search students...',
+                          hintStyle: TextStyle(color: Colors.black.withOpacity(0.3)),
+                          prefixIcon: const Icon(Icons.search, color: Colors.black54),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 18),
+                                  onPressed: () {
+                                    setState(() {
+                                      _searchQuery = '';
+                                      _searchController.clear();
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value;
+                          });
+                        },
+                      ),
                     ),
                   ),
                   

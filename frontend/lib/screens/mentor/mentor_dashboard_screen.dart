@@ -240,7 +240,7 @@ class _MentorDashboardScreenState extends State<MentorDashboardScreen> {
                               children: [
                                 _buildSummaryCard(
                                   context,
-                                  'Total Mentees',
+                                  'Total Students',
                                   batchStats['totalCount'] ??
                                       mentor.totalStudentsAssigned.toString(),
                                   Icons.groups_outlined,
@@ -277,15 +277,7 @@ class _MentorDashboardScreenState extends State<MentorDashboardScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Text(
-                                  'STUDENTS',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 20,
-                                    color: Color(0xFF2D3142),
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
+                                const SizedBox.shrink(),
                                 TextButton(
                                   onPressed: () {
                                     Navigator.push(
