@@ -1,15 +1,21 @@
 // backend\setup-mentor.js
 const bcrypt = require('bcrypt');
-const { Mentor } = require('./model');
+const { sequelize, Mentor } = require('./model');
+const { testDatabaseConnection } = require('./config/database');
 
 async function createMentor() {
   try {
     const email = 'rais.mulla@pvppcoe.ac.in';
-    const password = 'password123'; // Default fallback, we use 12345678 as requested
+    const password = '12345678';
+
+    
+
+    await testDatabaseConnection();
+    await sequelize.sync({ alter: true });
 
     // Hash the password
     const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash('12345678', saltRounds);
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     const [mentor, created] = await Mentor.findOrCreate({
       where: { email: email },
@@ -33,10 +39,11 @@ async function createMentor() {
       console.log(`Password updated for ${email}.`);
     }
 
-    process.exit(0);
   } catch (error) {
     console.error('Error creating mentor:', error);
     process.exit(1);
+  } finally {
+    await sequelize.close();
   }
 }
 

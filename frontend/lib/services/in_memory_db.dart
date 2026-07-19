@@ -182,7 +182,7 @@ class InMemoryDb {
         description: 'Worked on UI screens and state management.',
         startDate: DateTime(2025, 6, 1),
         endDate: DateTime(2025, 7, 31),
-        isVerified: true,
+        status: 'Approved',
       ),
     );
 
