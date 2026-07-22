@@ -22,6 +22,7 @@ const semesterRoutes = require('./routes/semesterRoutes');
 const subjectMarkRoutes = require('./routes/subjectMarkRoutes');
 const authRoutes = require('./routes/authRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const testRoutes = require('./routes/testRoutes');
 
 const app = express();
 
@@ -61,6 +62,7 @@ app.use('/api/semesters', semesterRoutes);
 app.use('/api/subject-marks', subjectMarkRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/test', testRoutes);
 
 // 404 handler
 app.use((req, res) => {
